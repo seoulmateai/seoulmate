@@ -1,0 +1,58 @@
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+
+import { ChatRoom } from "@/components/chat/chat-room";
+import { requireOnboardedUser } from "@/lib/auth/session";
+import { characters, getCharacter } from "@/lib/characters";
+import { MESSAGE_PAGE_SIZE } from "@/lib/chat/constants";
+import { getDailyUsage, getOrCreateRoomId } from "@/lib/chat/server";
+import { MESSAGE_COLUMNS, type ChatMessage } from "@/lib/chat/types";
+
+export function generateStaticParams() {
+  return characters.map((c) => ({ characterId: c.id }));
+}
+
+export default function ChatRoomPage({ params }: PageProps<"/chats/[characterId]">) {
+  return (
+    <Suspense fallback={<div className="flex-1 bg-chat" />}>
+      <ChatRoomLoader params={params} />
+    </Suspense>
+  );
+}
+
+async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">, "params">) {
+  const { characterId } = await params;
+  const character = getCharacter(characterId);
+  if (!character) notFound();
+
+  const { supabase, user } = await requireOnboardedUser(`/chats/${character.id}`);
+  // 대화 시작 = 채팅방 생성 → Chats 목록에 나타남
+  const roomId = await getOrCreateRoomId(user.id, character.id);
+
+  const [{ data: rows }, usage] = await Promise.all([
+    supabase
+      .from("messages")
+      .select(MESSAGE_COLUMNS)
+      .eq("room_id", roomId)
+      .order("id", { ascending: false })
+      .limit(MESSAGE_PAGE_SIZE + 1),
+    getDailyUsage(user.id),
+  ]);
+  const latest = (rows ?? []) as ChatMessage[];
+
+  return (
+    <ChatRoom
+      roomId={roomId}
+      // systemPrompt가 클라이언트로 넘어가지 않도록 필요한 필드만 전달
+      character={{
+        id: character.id,
+        name: character.name,
+        occupation: character.occupation,
+        avatar: character.avatar.src,
+      }}
+      initialMessages={latest.slice(0, MESSAGE_PAGE_SIZE).reverse()}
+      initialHasMore={latest.length > MESSAGE_PAGE_SIZE}
+      initialUsage={usage}
+    />
+  );
+}
