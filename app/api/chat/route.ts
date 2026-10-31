@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getCharacter } from "@/lib/characters";
+import { getCharacterPersona } from "@/lib/characters";
 import { MAX_INPUT_LENGTH } from "@/lib/chat/constants";
 import { freeDailyLimit, getOrCreateRoomId } from "@/lib/chat/server";
 import { MESSAGE_COLUMNS, type ChatApiResponse, type ChatMessage } from "@/lib/chat/types";
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   if (!user) return json({ ok: false, error: "UNAUTHENTICATED" }, 401);
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
-  const character = parsed.success ? getCharacter(parsed.data.characterId) : undefined;
+  const character = parsed.success ? await getCharacterPersona(parsed.data.characterId) : null;
   if (!parsed.success || !character) return json({ ok: false, error: "INVALID_REQUEST" }, 400);
   const { content } = parsed.data;
 
@@ -41,7 +41,9 @@ export async function POST(request: Request) {
   if (!profile) return json({ ok: false, error: "ONBOARDING_REQUIRED" }, 403);
 
   const admin = createAdminClient();
-  const roomId = await getOrCreateRoomId(user.id, character.id);
+  const roomId = await getOrCreateRoomId(user.id, character);
+  // 비활성 캐릭터 + 기존 대화방 없음
+  if (roomId == null) return json({ ok: false, error: "INVALID_REQUEST" }, 400);
 
   // 2. 일일 사용량 (확인 + 증가를 DB에서 원자적으로). 구독은 아직 없음 → 모두 무료 한도
   const limit = freeDailyLimit();
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
         turn_id: turnId,
         purpose: "REPLY",
         model: geminiModel(),
-        character_slug: character.id,
+        character_id: character.id,
         persona_version: character.personaVersion,
         latency_ms: Date.now() - startedAt,
         status,
@@ -119,7 +121,6 @@ export async function POST(request: Request) {
         turn_id: turnId,
         role: "ASSISTANT",
         content: bubble,
-        persona_version: character.personaVersion,
       })),
     ])
     .select(MESSAGE_COLUMNS)

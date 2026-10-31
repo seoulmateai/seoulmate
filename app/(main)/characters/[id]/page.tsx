@@ -5,9 +5,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AuthGatedLink } from "@/components/auth/auth-gated-link";
-import { characters, getCharacter } from "@/lib/characters";
+import { getCharacter, getCharacters } from "@/lib/characters";
 
-export function generateStaticParams() {
+// 빌드 시점의 캐릭터만 미리 렌더링. 이후 추가된 캐릭터는 첫 요청 때 렌더링
+export async function generateStaticParams() {
+  const characters = await getCharacters();
   return characters.map((c) => ({ id: c.id }));
 }
 
@@ -15,14 +17,14 @@ export async function generateMetadata({
   params,
 }: PageProps<"/characters/[id]">): Promise<Metadata> {
   const { id } = await params;
-  const character = getCharacter(id);
-  return { title: character ? `${character.name} · seoulmate` : "seoulmate" };
+  const character = await getCharacter(id);
+  return { title: character?.isActive ? `${character.name} · seoulmate` : "seoulmate" };
 }
 
 export default async function CharacterPage({ params }: PageProps<"/characters/[id]">) {
   const { id } = await params;
-  const character = getCharacter(id);
-  if (!character) notFound();
+  const character = await getCharacter(id);
+  if (!character?.isActive) notFound();
 
   return (
     <div className="mx-auto flex w-full max-w-[1180px] flex-col px-5 pt-6 pb-12 md:px-14 md:pt-10 md:pb-20">
@@ -37,11 +39,12 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
       <div className="grid gap-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-center md:gap-14">
         <div className="relative aspect-[4/5] overflow-hidden rounded-[19px] bg-[#e9e9ec]">
           <Image
-            src={character.avatar}
+            src={character.avatar.src}
             alt={`Portrait of ${character.name}`}
             fill
             priority
-            placeholder="blur"
+            placeholder={character.avatar.blurDataURL ? "blur" : "empty"}
+            blurDataURL={character.avatar.blurDataURL ?? undefined}
             sizes="(max-width: 768px) 100vw, 520px"
             className="object-cover object-top"
           />

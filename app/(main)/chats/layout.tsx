@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { ChatSidebarList } from "@/components/chat/chat-sidebar-list";
 import { ChatsWorkspace } from "@/components/chat/chats-workspace";
 import { requireOnboardedUser } from "@/lib/auth/session";
-import { getCharacter } from "@/lib/characters";
+import { getCharactersByIds } from "@/lib/characters";
 
 export default function ChatsLayout({ children }: LayoutProps<"/chats">) {
   return (
@@ -25,15 +25,18 @@ export default function ChatsLayout({ children }: LayoutProps<"/chats">) {
 async function ChatList() {
   const { supabase } = await requireOnboardedUser("/chats");
 
-  // RLS: 본인 채팅방만 조회됨
+  // 채팅방: 사용자별 데이터라 매번 조회 (RLS: 본인 채팅방만)
   const { data: rooms } = await supabase
     .from("chat_rooms")
-    .select("id, character_slug, last_message_at, last_message_preview, created_at")
+    .select("id, character_id, last_message_at, last_message_preview, created_at")
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
 
+  // 캐릭터 정보는 공유 캐시에서 가져와 JS에서 합침 (SQL join 시 매 요청 조회됨)
+  const characters = await getCharactersByIds((rooms ?? []).map((r) => r.character_id));
+
   const items = (rooms ?? []).flatMap((room) => {
-    const character = getCharacter(room.character_slug);
+    const character = characters.get(room.character_id);
     return character
       ? [
           {

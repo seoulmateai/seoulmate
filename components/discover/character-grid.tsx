@@ -1,10 +1,10 @@
 "use client";
 
-import Image, { type StaticImageData } from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
-import type { CharacterBadge } from "@/lib/characters/types";
+import type { CharacterAvatar, CharacterBadge } from "@/lib/characters/types";
 import { cn } from "@/lib/utils";
 
 export type CharacterCard = {
@@ -14,7 +14,7 @@ export type CharacterCard = {
   occupation: string;
   bio: string;
   badge: CharacterBadge;
-  avatar: StaticImageData;
+  avatar: CharacterAvatar;
 };
 
 type Filter = "all" | CharacterBadge;
@@ -71,11 +71,12 @@ export function CharacterGrid({ characters }: { characters: CharacterCard[] }) {
               className="group relative isolate block min-h-[310px] overflow-hidden rounded-[15px] bg-[#e9e9ec] transition-[transform,box-shadow] duration-250 hover:-translate-y-1.5 hover:shadow-[0_16px_35px_rgba(28,24,30,0.13)] focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:min-h-[430px] md:rounded-[19px]"
             >
               <Image
-                src={character.avatar}
+                src={character.avatar.src}
                 alt={`Portrait of ${character.name}`}
                 fill
                 priority={i < 4}
-                placeholder="blur"
+                placeholder={character.avatar.blurDataURL ? "blur" : "empty"}
+                blurDataURL={character.avatar.blurDataURL ?? undefined}
                 sizes="(max-width: 1050px) 50vw, 340px"
                 className="-z-20 object-cover object-top transition-transform duration-500 group-hover:scale-[1.045]"
               />

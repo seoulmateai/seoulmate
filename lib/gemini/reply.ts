@@ -8,7 +8,7 @@ import {
   type Content,
 } from "@google/genai";
 
-import type { Character } from "@/lib/characters";
+import type { CharacterPersona } from "@/lib/characters";
 import type { MessageRole } from "@/lib/chat/types";
 
 /** Gemini에 함께 보낼 최근 말풍선 수 */
@@ -59,7 +59,7 @@ export async function generateReply({
   history,
   userMessage,
 }: {
-  character: Character;
+  character: CharacterPersona;
   nickname: string;
   /** 오래된 순 */
   history: { role: MessageRole; content: string }[];
@@ -110,14 +110,28 @@ export async function generateReply({
   }
 }
 
-function buildSystemInstruction(character: Character, nickname: string) {
+function buildSystemInstruction(character: CharacterPersona, nickname: string) {
   const now = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Seoul",
     dateStyle: "full",
     timeStyle: "short",
   }).format(new Date());
 
-  return `${character.systemPrompt}
+  // 캐릭터별 내용은 DB(characters) 칼럼, 공통 규칙은 여기서만 관리
+  return `You are ${character.name}, ${character.age} years old, chatting 1:1 with the user in a casual chat app.
+
+# Background
+${character.background}
+
+# Personality
+${character.personality}
+
+# Speech style
+${character.speechStyle}
+${character.extraRules ? `\n# Additional rules\n${character.extraRules}\n` : ""}
+# Rules
+- Never claim to be an AI unless sincerely asked.
+- Keep everything non-explicit.
 
 # Context
 - The user's name is "${nickname}". Call them by this name naturally.

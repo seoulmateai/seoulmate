@@ -49,7 +49,7 @@ Stripe에서 한국 결제수단(국내 카드, 카카오페이, 네이버페이
 ### 구조 원칙
 - Gemini와 Stripe 시크릿 키, Supabase service role 키는 서버(Route Handler / Server Action)에서만 써요.
 - 클라이언트는 Supabase anon key를 쓰고, RLS로 본인 데이터만 접근해요.
-- 캐릭터는 `lib/characters/{id}.ts`에 둬요. `{ id, name, avatar, intro, keywords, systemPrompt }`
+- 캐릭터는 Supabase `characters` 테이블에 두고 대시보드에서 수정해요. 이미지는 Cloudflare R2(`characters/{id}/파일명`). 조회는 `lib/characters`(공유 캐시 `use cache`), 수정 시 Webhook → `/api/revalidate/characters`로 캐시 무효화
 
 ---
 
@@ -83,7 +83,7 @@ Stripe에서 한국 결제수단(국내 카드, 카카오페이, 네이버페이
 ### 4. 캐릭터 선택 / 프로필 `/characters`, `/characters/[id]`
 - 캐릭터 카드 4장
 - 상세 화면에서 소개와 성격 키워드를 보여주고 "대화 시작" 버튼 제공 (대화방이 없으면 생성)
-- **도구:** `lib/characters`에서 읽어옴 (DB 조회 없음)
+- **도구:** `lib/characters`의 `getCharacters` / `getCharacter` (공유 캐시)
 - **이벤트:** `character_viewed`, `chat_started`
 
 ### 5. 채팅 목록 `/chats`

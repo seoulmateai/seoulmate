@@ -14,25 +14,33 @@ export function todayKst() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
 }
 
-/** 사용자 × 캐릭터 채팅방 id. 없으면 만든다 (chat_rooms 쓰기는 서버 전용) */
-export async function getOrCreateRoomId(userId: string, characterSlug: string) {
+/**
+ * 사용자 × 캐릭터 채팅방 id. 없으면 만든다 (chat_rooms 쓰기는 서버 전용).
+ * 비활성 캐릭터는 새 방을 만들지 않고, 기존 방이 없으면 null.
+ */
+export async function getOrCreateRoomId(
+  userId: string,
+  character: { id: string; isActive: boolean },
+): Promise<number | null> {
   const admin = createAdminClient();
-  const { error: upsertError } = await admin
-    .from("chat_rooms")
-    .upsert(
-      { user_id: userId, character_slug: characterSlug },
-      { onConflict: "user_id,character_slug", ignoreDuplicates: true },
-    );
-  if (upsertError) throw upsertError;
+  if (character.isActive) {
+    const { error: upsertError } = await admin
+      .from("chat_rooms")
+      .upsert(
+        { user_id: userId, character_id: character.id },
+        { onConflict: "user_id,character_id", ignoreDuplicates: true },
+      );
+    if (upsertError) throw upsertError;
+  }
 
   const { data, error } = await admin
     .from("chat_rooms")
     .select("id")
     .eq("user_id", userId)
-    .eq("character_slug", characterSlug)
-    .single();
+    .eq("character_id", character.id)
+    .maybeSingle();
   if (error) throw error;
-  return data.id;
+  return data?.id ?? null;
 }
 
 export async function getDailyUsage(userId: string): Promise<DailyUsage> {

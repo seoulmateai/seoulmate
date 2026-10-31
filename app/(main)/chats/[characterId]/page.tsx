@@ -3,12 +3,13 @@ import { Suspense } from "react";
 
 import { ChatRoom } from "@/components/chat/chat-room";
 import { requireOnboardedUser } from "@/lib/auth/session";
-import { characters, getCharacter } from "@/lib/characters";
+import { getCharacter, getCharacters } from "@/lib/characters";
 import { MESSAGE_PAGE_SIZE } from "@/lib/chat/constants";
 import { getDailyUsage, getOrCreateRoomId } from "@/lib/chat/server";
 import { MESSAGE_COLUMNS, type ChatMessage } from "@/lib/chat/types";
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const characters = await getCharacters();
   return characters.map((c) => ({ characterId: c.id }));
 }
 
@@ -22,12 +23,14 @@ export default function ChatRoomPage({ params }: PageProps<"/chats/[characterId]
 
 async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">, "params">) {
   const { characterId } = await params;
-  const character = getCharacter(characterId);
+  // 캐릭터: 공유 캐시 / 아래 채팅방·메시지·사용량: 사용자별 데이터라 매번 DB 조회
+  const character = await getCharacter(characterId);
   if (!character) notFound();
 
   const { supabase, user } = await requireOnboardedUser(`/chats/${character.id}`);
-  // 대화 시작 = 채팅방 생성 → Chats 목록에 나타남
-  const roomId = await getOrCreateRoomId(user.id, character.id);
+  // 대화 시작 = 채팅방 생성 → Chats 목록에 나타남 (비활성 캐릭터는 기존 방만)
+  const roomId = await getOrCreateRoomId(user.id, character);
+  if (roomId == null) notFound();
 
   const [{ data: rows }, usage] = await Promise.all([
     supabase
@@ -43,7 +46,6 @@ async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">
   return (
     <ChatRoom
       roomId={roomId}
-      // systemPrompt가 클라이언트로 넘어가지 않도록 필요한 필드만 전달
       character={{
         id: character.id,
         name: character.name,

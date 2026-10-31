@@ -14,9 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      characters: {
+        Row: {
+          age: number
+          avatar_path: string
+          background: string
+          badge: string
+          bio: string
+          blur_data_url: string | null
+          created_at: string
+          extra_rules: string | null
+          id: string
+          intro: string
+          is_active: boolean
+          keywords: string[]
+          name: string
+          occupation: string
+          persona_version: number
+          personality: string
+          sort_order: number
+          speech_style: string
+          updated_at: string
+        }
+        Insert: {
+          age: number
+          avatar_path: string
+          background: string
+          badge?: string
+          bio: string
+          blur_data_url?: string | null
+          created_at?: string
+          extra_rules?: string | null
+          id?: string
+          intro: string
+          is_active?: boolean
+          keywords?: string[]
+          name: string
+          occupation: string
+          persona_version?: number
+          personality: string
+          sort_order?: number
+          speech_style: string
+          updated_at?: string
+        }
+        Update: {
+          age?: number
+          avatar_path?: string
+          background?: string
+          badge?: string
+          bio?: string
+          blur_data_url?: string | null
+          created_at?: string
+          extra_rules?: string | null
+          id?: string
+          intro?: string
+          is_active?: boolean
+          keywords?: string[]
+          name?: string
+          occupation?: string
+          persona_version?: number
+          personality?: string
+          sort_order?: number
+          speech_style?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chat_rooms: {
         Row: {
-          character_slug: string
+          character_id: string
           created_at: string
           id: number
           last_message_at: string | null
@@ -28,7 +94,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          character_slug: string
+          character_id: string
           created_at?: string
           id?: never
           last_message_at?: string | null
@@ -40,7 +106,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          character_slug?: string
+          character_id?: string
           created_at?: string
           id?: never
           last_message_at?: string | null
@@ -52,6 +118,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "chat_rooms_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "chat_rooms_user_id_fkey"
             columns: ["user_id"]
@@ -114,7 +187,7 @@ export type Database = {
       llm_calls: {
         Row: {
           cached_input_tokens: number | null
-          character_slug: string | null
+          character_id: string | null
           created_at: string
           error_code: string | null
           id: number
@@ -132,7 +205,7 @@ export type Database = {
         }
         Insert: {
           cached_input_tokens?: number | null
-          character_slug?: string | null
+          character_id?: string | null
           created_at?: string
           error_code?: string | null
           id?: never
@@ -150,7 +223,7 @@ export type Database = {
         }
         Update: {
           cached_input_tokens?: number | null
-          character_slug?: string | null
+          character_id?: string | null
           created_at?: string
           error_code?: string | null
           id?: never
@@ -188,7 +261,6 @@ export type Database = {
           content: string
           created_at: string
           id: number
-          persona_version: number | null
           role: string
           room_id: number
           turn_id: string
@@ -197,7 +269,6 @@ export type Database = {
           content: string
           created_at?: string
           id?: never
-          persona_version?: number | null
           role: string
           room_id: number
           turn_id: string
@@ -206,7 +277,6 @@ export type Database = {
           content?: string
           created_at?: string
           id?: never
-          persona_version?: number | null
           role?: string
           room_id?: number
           turn_id?: string
