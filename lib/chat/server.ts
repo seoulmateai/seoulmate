@@ -23,24 +23,30 @@ export async function getOrCreateRoomId(
   character: { id: string; isActive: boolean },
 ): Promise<number | null> {
   const admin = createAdminClient();
-  if (character.isActive) {
-    const { error: upsertError } = await admin
+  const findRoomId = async () => {
+    const { data, error } = await admin
       .from("chat_rooms")
-      .upsert(
-        { user_id: userId, character_id: character.id },
-        { onConflict: "user_id,character_id", ignoreDuplicates: true },
-      );
-    if (upsertError) throw upsertError;
-  }
+      .select("id")
+      .eq("user_id", userId)
+      .eq("character_id", character.id)
+      .maybeSingle();
+    if (error) throw error;
+    return data?.id ?? null;
+  };
 
-  const { data, error } = await admin
+  // 대부분은 이미 방이 있으므로 조회 먼저 (DB 왕복 1번)
+  const existing = await findRoomId();
+  if (existing != null || !character.isActive) return existing;
+
+  const { error: upsertError } = await admin
     .from("chat_rooms")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("character_id", character.id)
-    .maybeSingle();
-  if (error) throw error;
-  return data?.id ?? null;
+    .upsert(
+      { user_id: userId, character_id: character.id },
+      { onConflict: "user_id,character_id", ignoreDuplicates: true },
+    );
+  if (upsertError) throw upsertError;
+  // 동시 요청으로 다른 쪽이 먼저 만들었어도(ignoreDuplicates) 다시 조회하면 id를 얻는다
+  return findRoomId();
 }
 
 export async function getDailyUsage(userId: string): Promise<DailyUsage> {
