@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { safeNextPath } from "@/lib/auth/next-path";
+import { captureServerEvent } from "@/lib/posthog/server";
 import { createClient } from "@/lib/supabase/server";
 import { onboardingSchema } from "@/lib/validation/onboarding";
 
@@ -34,6 +35,15 @@ export async function completeOnboarding(
       return { error: "Please enter a valid date of birth." };
     }
     return { error: "Something went wrong. Please try again." };
+  }
+
+  if (!error) {
+    const { data } = await supabase.auth.getClaims();
+    if (data) {
+      captureServerEvent(data.claims.sub, "onboarding_completed", {
+        marketing_agreed: marketingAgreed,
+      });
+    }
   }
 
   redirect(safeNextPath(rawNext));

@@ -1,6 +1,7 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
+import posthog from "posthog-js";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
@@ -24,8 +25,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
     // UI 표시용(로그인 모달을 띄울지). 실제 접근 제어는 proxy.ts와 RLS가 담당.
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      // PostHog 사용자 연결. 서버 이벤트와 같은 distinct_id(user.id) 사용
+      // 로그아웃·회원 탈퇴 모두 signOut → SIGNED_OUT 이벤트로 여기서 reset
+      if (session?.user) {
+        if (posthog.get_distinct_id() !== session.user.id) posthog.identify(session.user.id);
+      } else if (event === "SIGNED_OUT") {
+        posthog.reset();
+      }
     });
     return () => data.subscription.unsubscribe();
   }, []);

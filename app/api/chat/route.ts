@@ -7,6 +7,7 @@ import { normalizeImage, type NormalizedImage } from "@/lib/chat/image.server";
 import { freeDailyLimit, getOrCreateRoomId } from "@/lib/chat/server";
 import { MESSAGE_COLUMNS, type ChatApiResponse, type ChatMessage } from "@/lib/chat/types";
 import { CONTEXT_MESSAGE_COUNT, generateReply, geminiModel } from "@/lib/gemini/reply";
+import { captureServerEvent } from "@/lib/posthog/server";
 import { deleteChatImage, putChatImage } from "@/lib/r2/chat-images";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
     return json({ ok: false, error: "SERVER_ERROR" }, 500);
   }
   if (used == null) {
+    captureServerEvent(user.id, "chat_limit_reached", { character_id: character.id, limit });
     return json({ ok: false, error: "LIMIT_REACHED", usage: { used: limit, limit } }, 429);
   }
   const usage = { used, limit };
@@ -131,6 +133,12 @@ export async function POST(request: Request) {
 
   if (reply.status !== "SUCCESS") {
     await Promise.all([refund(), logCall(reply.status, { error_code: reply.errorCode })]);
+    captureServerEvent(user.id, "chat_reply_failed", {
+      character_id: character.id,
+      status: reply.status,
+      error_code: reply.errorCode,
+      has_image: image != null,
+    });
     const usageAfterRefund = { used: used - 1, limit };
     return reply.status === "BLOCKED"
       ? json({ ok: false, error: "BLOCKED", usage: usageAfterRefund }, 422)
@@ -188,6 +196,18 @@ export async function POST(request: Request) {
     ]);
     return json({ ok: false, error: "SERVER_ERROR", usage: { used: used - 1, limit } }, 500);
   }
+
+  captureServerEvent(user.id, "chat_message_sent", {
+    character_id: character.id,
+    has_image: imagePath != null,
+    content_length: content.length,
+    bubble_count: reply.bubbles.length,
+    latency_ms: Date.now() - startedAt,
+    input_tokens: reply.usage.input,
+    output_tokens: reply.usage.output,
+    used,
+    limit,
+  });
 
   return json({ ok: true, messages: saved as ChatMessage[], usage }, 200);
 }

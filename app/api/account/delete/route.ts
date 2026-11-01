@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { captureServerEvent } from "@/lib/posthog/server";
 import { deleteUserChatImages } from "@/lib/r2/chat-images";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -10,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 //  3. 채팅 이미지(R2) 삭제
 //  4. auth 사용자 삭제 → profiles → chat_rooms → messages, inquiries, usage_counters cascade 삭제
 //     llm_calls / reports 는 user_id가 NULL로 남음
-//  5. (TODO: PostHog 추가 시) 클라이언트에서 posthog.reset()
+//  5. PostHog account_deleted 기록. 클라이언트 posthog.reset()은 signOut 시 AuthProvider가 처리
 export async function POST(request: NextRequest) {
   // 다른 사이트에서 보낸 요청 차단
   const origin = request.headers.get("origin");
@@ -43,5 +44,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "SERVER_ERROR" }, { status: 500 });
   }
 
+  captureServerEvent(user.id, "account_deleted");
   return NextResponse.json({ ok: true });
 }
