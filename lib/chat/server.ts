@@ -6,7 +6,7 @@ import type { DailyUsage } from "./types";
 
 export function freeDailyLimit() {
   const n = Number(process.env.FREE_DAILY_REPLY_LIMIT);
-  return Number.isInteger(n) && n > 0 ? n : 30;
+  return Number.isInteger(n) && n > 0 ? n : 10;
 }
 
 /** 사용량 집계 기준일 (DB 함수와 동일하게 KST) */
