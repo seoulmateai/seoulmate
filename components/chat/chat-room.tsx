@@ -33,12 +33,17 @@ export function ChatRoom({
   initialMessages,
   initialHasMore,
   initialUsage,
+  subscribed,
+  canSubscribe,
 }: {
   roomId: number;
   character: ChatCharacter;
   initialMessages: ChatMessage[];
   initialHasMore: boolean;
   initialUsage: DailyUsage;
+  subscribed: boolean;
+  /** 결제가 켜져 있고 아직 구독 전 → 한도 모달에 구독 버튼 표시 */
+  canSubscribe: boolean;
 }) {
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
@@ -253,7 +258,7 @@ export function ChatRoom({
         <div className="flex shrink-0 items-center gap-2">
           <span
             className="rounded-full bg-coral-soft px-2.5 py-1.5 text-[11px] font-bold text-coral-dark"
-            title="Free replies left today"
+            title={subscribed ? "Replies left today" : "Free replies left today"}
           >
             {remaining} / {usage.limit} left today
           </span>
@@ -306,7 +311,13 @@ export function ChatRoom({
         onRemoveImage={removeImage}
       />
 
-      <LimitDialog open={limitOpen} onOpenChange={setLimitOpen} limit={usage.limit} />
+      <LimitDialog
+        open={limitOpen}
+        onOpenChange={setLimitOpen}
+        limit={usage.limit}
+        subscribed={subscribed}
+        canSubscribe={canSubscribe}
+      />
     </div>
   );
 }

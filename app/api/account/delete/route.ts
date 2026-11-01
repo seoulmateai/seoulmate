@@ -1,17 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { refundAndCancelRemainingSubscriptions } from "@/lib/billing/orphan";
+import { cancelBillingForDeletion } from "@/lib/billing/subscription";
 import { captureServerEvent } from "@/lib/posthog/server";
 import { deleteUserChatImages } from "@/lib/r2/chat-images";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 // 회원 탈퇴
-//  1. (TODO: 결제 추가 시) Stripe 구독 취소
+//  1. Stripe 결제 페이지 만료 + 구독 즉시 취소 (결제가 꺼진 환경에서는 건너뜀). 실패하면 탈퇴 중단
 //  2. 신고 메모 비우기 (reports는 통계용으로 남고 user_id만 NULL이 됨)
 //  3. 채팅 이미지(R2) 삭제
 //  4. auth 사용자 삭제 → profiles → chat_rooms → messages, inquiries, usage_counters cascade 삭제
 //     llm_calls / reports 는 user_id가 NULL로 남음
-//  5. PostHog account_deleted 기록. 클라이언트 posthog.reset()은 signOut 시 AuthProvider가 처리
+//  5. 삭제 직후 Stripe 재확인: 탈퇴 도중 결제가 끝나 생긴 구독은 환불·취소
+//  6. PostHog account_deleted 기록. 클라이언트 posthog.reset()은 signOut 시 AuthProvider가 처리
 export async function POST(request: NextRequest) {
   // 다른 사이트에서 보낸 요청 차단
   const origin = request.headers.get("origin");
@@ -24,6 +27,15 @@ export async function POST(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ ok: false, error: "UNAUTHENTICATED" }, { status: 401 });
+
+  // 결제 페이지 만료·구독 취소에 실패하면 탈퇴 중단 (계정만 지워지고 결제가 계속되면 안 됨)
+  let stripeCustomerId: string | null;
+  try {
+    stripeCustomerId = await cancelBillingForDeletion(user.id);
+  } catch (e) {
+    console.error("[account/delete] canceling subscription failed", e);
+    return NextResponse.json({ ok: false, error: "SERVER_ERROR" }, { status: 500 });
+  }
 
   const admin = createAdminClient();
 
@@ -42,6 +54,14 @@ export async function POST(request: NextRequest) {
   if (error) {
     console.error("[account/delete] deleteUser failed", error);
     return NextResponse.json({ ok: false, error: "SERVER_ERROR" }, { status: 500 });
+  }
+
+  // 1과 계정 삭제 사이에 결제가 끝나 구독이 새로 생겼으면 환불·취소.
+  // 계정은 이미 지워졌으므로 실패해도 탈퇴는 성공 처리 (다음 갱신 webhook이 다시 환불·취소한다)
+  if (stripeCustomerId) {
+    await refundAndCancelRemainingSubscriptions(stripeCustomerId).catch((e) =>
+      console.error(`[account/delete] post-deletion billing check failed (${stripeCustomerId})`, e),
+    );
   }
 
   captureServerEvent(user.id, "account_deleted");

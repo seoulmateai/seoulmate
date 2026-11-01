@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { ChatRoom } from "@/components/chat/chat-room";
 import { requireOnboardedUser } from "@/lib/auth/session";
+import { isBillingEnabled } from "@/lib/billing/config";
 import { getCharacter, getCharacters } from "@/lib/characters";
 import { MESSAGE_PAGE_SIZE } from "@/lib/chat/constants";
 import { getDailyUsage, getOrCreateRoomId } from "@/lib/chat/server";
@@ -32,7 +33,7 @@ async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">
   const roomId = await getOrCreateRoomId(user.id, character);
   if (roomId == null) notFound();
 
-  const [{ data: rows }, usage] = await Promise.all([
+  const [{ data: rows }, { usage, subscribed }] = await Promise.all([
     supabase
       .from("messages")
       .select(MESSAGE_COLUMNS)
@@ -55,6 +56,8 @@ async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">
       initialMessages={latest.slice(0, MESSAGE_PAGE_SIZE).reverse()}
       initialHasMore={latest.length > MESSAGE_PAGE_SIZE}
       initialUsage={usage}
+      subscribed={subscribed}
+      canSubscribe={isBillingEnabled() && !subscribed}
     />
   );
 }

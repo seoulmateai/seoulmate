@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isActiveSubscriber } from "@/lib/billing/subscription";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { DailyUsage } from "./types";
@@ -7,6 +8,12 @@ import type { DailyUsage } from "./types";
 export function freeDailyLimit() {
   const n = Number(process.env.FREE_DAILY_REPLY_LIMIT);
   return Number.isInteger(n) && n > 0 ? n : 10;
+}
+
+/** 구독자 일일 한도. 구독자도 LLM 비용 상한을 위해 consume_reply_quota를 거친다 */
+export function paidDailyLimit() {
+  const n = Number(process.env.PAID_DAILY_REPLY_LIMIT);
+  return Number.isInteger(n) && n > 0 ? n : 15;
 }
 
 /** 사용량 집계 기준일 (DB 함수와 동일하게 KST) */
@@ -49,12 +56,26 @@ export async function getOrCreateRoomId(
   return findRoomId();
 }
 
-export async function getDailyUsage(userId: string): Promise<DailyUsage> {
-  const { data } = await createAdminClient()
-    .from("usage_counters")
-    .select("reply_count")
-    .eq("user_id", userId)
-    .eq("usage_date", todayKst())
-    .maybeSingle();
-  return { used: data?.reply_count ?? 0, limit: freeDailyLimit() };
+/** 구독 여부에 따른 일일 한도. 결제가 꺼진 환경(Production)은 DB 조회 없이 무료 한도 */
+export async function getReplyPlan(userId: string) {
+  const subscribed = await isActiveSubscriber(userId);
+  return { subscribed, limit: subscribed ? paidDailyLimit() : freeDailyLimit() };
+}
+
+export async function getDailyUsage(
+  userId: string,
+): Promise<{ usage: DailyUsage; subscribed: boolean }> {
+  const [{ data }, plan] = await Promise.all([
+    createAdminClient()
+      .from("usage_counters")
+      .select("reply_count")
+      .eq("user_id", userId)
+      .eq("usage_date", todayKst())
+      .maybeSingle(),
+    getReplyPlan(userId),
+  ]);
+  return {
+    usage: { used: data?.reply_count ?? 0, limit: plan.limit },
+    subscribed: plan.subscribed,
+  };
 }

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getCharacterPersona } from "@/lib/characters";
 import { MAX_IMAGE_BYTES, MAX_INPUT_LENGTH } from "@/lib/chat/constants";
 import { normalizeImage, type NormalizedImage } from "@/lib/chat/image.server";
-import { freeDailyLimit, getOrCreateRoomId } from "@/lib/chat/server";
+import { getOrCreateRoomId, getReplyPlan } from "@/lib/chat/server";
 import { MESSAGE_COLUMNS, type ChatApiResponse, type ChatMessage } from "@/lib/chat/types";
 import { CONTEXT_MESSAGE_COUNT, generateReply, geminiModel } from "@/lib/gemini/reply";
 import { captureServerEvent } from "@/lib/posthog/server";
@@ -67,12 +67,14 @@ export async function POST(request: Request) {
   if (!profile) return json({ ok: false, error: "ONBOARDING_REQUIRED" }, 403);
 
   const admin = createAdminClient();
-  const roomId = await getOrCreateRoomId(user.id, character);
+  const [roomId, { limit }] = await Promise.all([
+    getOrCreateRoomId(user.id, character),
+    getReplyPlan(user.id),
+  ]);
   // 비활성 캐릭터 + 기존 대화방 없음
   if (roomId == null) return json({ ok: false, error: "INVALID_REQUEST" }, 400);
 
-  // 2. 일일 사용량 (확인 + 증가를 DB에서 원자적으로). 구독은 아직 없음 → 모두 무료 한도
-  const limit = freeDailyLimit();
+  // 2. 일일 사용량 (확인 + 증가를 DB에서 원자적으로). 한도는 구독 여부에 따라 무료/구독자
   const { data: used, error: quotaError } = await admin.rpc("consume_reply_quota", {
     p_user_id: user.id,
     p_limit: limit,

@@ -5,8 +5,9 @@ import { cache } from "react";
 
 import { createClient } from "@/lib/supabase/server";
 
-// 한 요청 안에서 layout(채팅 목록)과 page(채팅방)가 같이 호출해도 인증·프로필 조회는 1번만
-const getSession = cache(async () => {
+// 한 요청 안에서 layout(채팅 목록)과 page(채팅방)가 같이 호출해도 인증·프로필 조회는 1번만.
+// 로그인하지 않아도 볼 수 있는 화면(/pricing)은 직접 호출: 비로그인이면 null, 온보딩 전이면 profile null
+export const getSession = cache(async () => {
   const supabase = await createClient();
   // getClaims()는 JWT 서명을 로컬에서 검증 (비대칭 서명 키 사용 시 Auth 서버 왕복 없음).
   // 토큰 갱신은 proxy.ts가 이미 처리했다.

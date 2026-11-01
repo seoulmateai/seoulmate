@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./database.types";
 
 // 로그인이 필요한 경로
-const PROTECTED_PATHS = ["/chats", "/settings", "/onboarding"];
+const PROTECTED_PATHS = ["/chats", "/settings", "/onboarding", "/billing/success"];
 // 로그인한 사용자는 들어올 필요 없는 경로
 const AUTH_PATHS = ["/login"];
 
