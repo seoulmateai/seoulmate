@@ -2,19 +2,36 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getCharacterPersona } from "@/lib/characters";
-import { MAX_INPUT_LENGTH } from "@/lib/chat/constants";
+import { MAX_IMAGE_BYTES, MAX_INPUT_LENGTH } from "@/lib/chat/constants";
+import { normalizeImage, type NormalizedImage } from "@/lib/chat/image.server";
 import { freeDailyLimit, getOrCreateRoomId } from "@/lib/chat/server";
 import { MESSAGE_COLUMNS, type ChatApiResponse, type ChatMessage } from "@/lib/chat/types";
 import { CONTEXT_MESSAGE_COUNT, generateReply, geminiModel } from "@/lib/gemini/reply";
+import { deleteChatImage, putChatImage } from "@/lib/r2/chat-images";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 30;
 
-const bodySchema = z.object({
-  characterId: z.string(),
-  content: z.string().trim().min(1).max(MAX_INPUT_LENGTH),
-});
+// multipart/form-data: characterId, content, image(선택). 텍스트와 사진 중 하나는 있어야 함
+const bodySchema = z
+  .object({
+    characterId: z.string(),
+    content: z.string().trim().max(MAX_INPUT_LENGTH).default(""),
+    image: z.instanceof(File).optional(),
+  })
+  .refine((b) => b.content.length > 0 || b.image);
+
+async function parseBody(request: Request) {
+  const form = await request.formData().catch(() => null);
+  if (!form) return null;
+  const parsed = bodySchema.safeParse({
+    characterId: form.get("characterId"),
+    content: form.get("content") ?? undefined,
+    image: form.get("image") ?? undefined,
+  });
+  return parsed.success ? parsed.data : null;
+}
 
 function json(body: ChatApiResponse, status: number) {
   return NextResponse.json(body, { status });
@@ -28,10 +45,18 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) return json({ ok: false, error: "UNAUTHENTICATED" }, 401);
 
-  const parsed = bodySchema.safeParse(await request.json().catch(() => null));
-  const character = parsed.success ? await getCharacterPersona(parsed.data.characterId) : null;
-  if (!parsed.success || !character) return json({ ok: false, error: "INVALID_REQUEST" }, 400);
-  const { content } = parsed.data;
+  const body = await parseBody(request);
+  const character = body ? await getCharacterPersona(body.characterId) : null;
+  if (!body || !character) return json({ ok: false, error: "INVALID_REQUEST" }, 400);
+  const { content } = body;
+
+  // 사진은 한도 차감 전에 검증·WebP 변환 (잘못된 파일로 횟수가 줄지 않게)
+  let image: NormalizedImage | null = null;
+  if (body.image) {
+    if (body.image.size > MAX_IMAGE_BYTES) return json({ ok: false, error: "INVALID_IMAGE" }, 413);
+    image = await normalizeImage(await body.image.arrayBuffer());
+    if (!image) return json({ ok: false, error: "INVALID_IMAGE" }, 400);
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -64,7 +89,7 @@ export async function POST(request: Request) {
   // 3. 캐릭터 프롬프트 + 최근 메시지로 Gemini 호출
   const { data: recent, error: historyError } = await admin
     .from("messages")
-    .select("role, content")
+    .select("role, content, image_path")
     .eq("room_id", roomId)
     .order("id", { ascending: false })
     .limit(CONTEXT_MESSAGE_COUNT);
@@ -81,8 +106,10 @@ export async function POST(request: Request) {
     history: recent.reverse().map((m) => ({
       role: m.role === "USER" ? "USER" : "ASSISTANT",
       content: m.content,
+      hasImage: m.image_path != null,
     })),
     userMessage: content,
+    userImage: image?.data,
   });
 
   const logCall = (status: string, extra: Record<string, unknown> = {}) =>
@@ -110,12 +137,32 @@ export async function POST(request: Request) {
       : json({ ok: false, error: "LLM_FAILED", usage: usageAfterRefund }, 502);
   }
 
-  // 4. user/assistant 메시지 저장 (한 문장으로 같이 저장 → 실패 시 둘 다 없음)
+  // 4. 사진 R2 업로드 (답변 성공 후에만 → 실패한 요청의 사진이 남지 않음)
+  let imagePath: string | null = null;
+  if (image) {
+    try {
+      imagePath = await putChatImage(user.id, image.data);
+    } catch (e) {
+      console.error("[chat] R2 upload failed", e);
+      await Promise.all([refund(), logCall("SUCCESS", { error_code: "IMAGE_UPLOAD_FAILED" })]);
+      return json({ ok: false, error: "SERVER_ERROR", usage: { used: used - 1, limit } }, 500);
+    }
+  }
+
+  // 5. user/assistant 메시지 저장 (한 문장으로 같이 저장 → 실패 시 둘 다 없음)
   //    chat_rooms.last_message_* 는 DB 트리거가 갱신
   const { data: saved, error: saveError } = await admin
     .from("messages")
     .insert([
-      { room_id: roomId, turn_id: turnId, role: "USER", content },
+      {
+        room_id: roomId,
+        turn_id: turnId,
+        role: "USER",
+        content,
+        image_path: imagePath,
+        image_width: image?.width,
+        image_height: image?.height,
+      },
       ...reply.bubbles.map((bubble) => ({
         room_id: roomId,
         turn_id: turnId,
@@ -134,7 +181,11 @@ export async function POST(request: Request) {
 
   if (saveError) {
     console.error("[chat] messages insert failed", saveError);
-    await refund();
+    await Promise.all([
+      refund(),
+      imagePath &&
+        deleteChatImage(imagePath).catch((e) => console.error("[chat] R2 cleanup failed", e)),
+    ]);
     return json({ ok: false, error: "SERVER_ERROR", usage: { used: used - 1, limit } }, 500);
   }
 

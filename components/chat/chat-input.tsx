@@ -1,9 +1,11 @@
 "use client";
 
-import { SendHorizontal } from "lucide-react";
+import { ImagePlus, Loader2, SendHorizontal, X } from "lucide-react";
+import Image from "next/image";
 import { useLayoutEffect, useRef } from "react";
 
 import { MAX_INPUT_LENGTH } from "@/lib/chat/constants";
+import type { PreparedImage } from "@/lib/chat/image.client";
 import { cn } from "@/lib/utils";
 
 const MAX_HEIGHT = 120;
@@ -13,14 +15,27 @@ export function ChatInput({
   onChange,
   onSend,
   sending,
+  image,
+  imageState,
+  imageError,
+  onPickImage,
+  onRemoveImage,
 }: {
   value: string;
   onChange: (value: string) => void;
   onSend: () => void;
   sending: boolean;
+  /** 첨부한 사진 (브라우저에서 변환 완료) */
+  image: PreparedImage | null;
+  imageState: "idle" | "preparing";
+  imageError: string | null;
+  onPickImage: (file: File) => void;
+  onRemoveImage: () => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
-  const canSend = value.trim().length > 0 && !sending;
+  const fileRef = useRef<HTMLInputElement>(null);
+  const preparing = imageState === "preparing";
+  const canSend = (value.trim().length > 0 || image != null) && !sending && !preparing;
 
   // 내용에 맞춰 높이 자동 조절
   useLayoutEffect(() => {
@@ -38,7 +53,59 @@ export function ChatInput({
         onSend();
       }}
     >
-      <div className="flex items-end gap-2.5 rounded-2xl border border-[#eeeef0] bg-white py-2 pr-2 pl-4 shadow-[0_4px_14px_rgba(30,25,30,0.04)] focus-within:border-[#ffd0cc]">
+      {(image || preparing || imageError) && (
+        <div className="mb-2 flex items-end gap-2">
+          {preparing && (
+            <div className="grid size-16 place-items-center rounded-xl border border-[#eeeef0] bg-white">
+              <Loader2 className="size-5 animate-spin text-primary/60" />
+            </div>
+          )}
+          {image && !preparing && (
+            <div className="relative">
+              <Image
+                src={image.previewUrl}
+                alt="Attached photo"
+                width={64}
+                height={64}
+                unoptimized
+                className="size-16 rounded-xl border border-[#eeeef0] object-cover"
+              />
+              <button
+                type="button"
+                aria-label="Remove photo"
+                className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-[#4b4a50] text-white hover:bg-black"
+                onClick={onRemoveImage}
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+          )}
+          {imageError && <p className="text-xs text-destructive">{imageError}</p>}
+        </div>
+      )}
+      <div className="flex items-end gap-2.5 rounded-2xl border border-[#eeeef0] bg-white py-2 pr-2 pl-2 shadow-[0_4px_14px_rgba(30,25,30,0.04)] focus-within:border-[#ffd0cc]">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            // 같은 파일을 다시 고를 수 있게 비움
+            e.target.value = "";
+            if (file) onPickImage(file);
+          }}
+        />
+        <button
+          type="button"
+          aria-label="Attach photo"
+          title="Attach photo"
+          disabled={sending || preparing}
+          className="grid size-[43px] shrink-0 place-items-center rounded-[13px] text-[#85858c] hover:text-coral disabled:opacity-50"
+          onClick={() => fileRef.current?.click()}
+        >
+          <ImagePlus className="size-5" />
+        </button>
         <textarea
           ref={ref}
           rows={1}

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { MESSAGE_PAGE_SIZE } from "@/lib/chat/constants";
+import { prepareImage, type PreparedImage } from "@/lib/chat/image.client";
 import {
   MESSAGE_COLUMNS,
   type ChatApiResponse,
@@ -23,6 +24,7 @@ import { MessageList, type OutboxItem } from "./message-list";
 const ERROR_TEXT: Record<string, string> = {
   BLOCKED: "This message couldn't be answered. Try saying it differently.",
   LLM_FAILED: "He couldn't reply right now. Please try again.",
+  INVALID_IMAGE: "This photo couldn't be sent. Try a different one.",
 };
 
 export function ChatRoom({
@@ -47,6 +49,9 @@ export function ChatRoom({
   const [usage, setUsage] = useState(initialUsage);
   const [limitOpen, setLimitOpen] = useState(false);
   const [draft, setDraft] = useState("");
+  const [attachment, setAttachment] = useState<PreparedImage | null>(null);
+  const [imageState, setImageState] = useState<"idle" | "preparing">("idle");
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
@@ -104,21 +109,22 @@ export function ChatRoom({
     return () => observer.disconnect();
   }, [hasMore, loadOlder]);
 
-  async function deliver(localId: string, content: string) {
+  async function deliver(localId: string, content: string, image?: PreparedImage) {
     let res: Response;
     let body: ChatApiResponse | null = null;
     try {
-      res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterId: character.id, content }),
-      });
+      const form = new FormData();
+      form.set("characterId", character.id);
+      form.set("content", content);
+      if (image) form.set("image", image.blob, "photo");
+      res = await fetch("/api/chat", { method: "POST", body: form });
       body = await res.json().catch(() => null);
     } catch {
       body = null;
     }
 
     if (body?.ok) {
+      if (image) URL.revokeObjectURL(image.previewUrl);
       setOutbox((prev) => prev.filter((m) => m.localId !== localId));
       setMessages((prev) => [...prev, ...body.messages]);
       setUsage(body.usage);
@@ -133,6 +139,13 @@ export function ChatRoom({
         // 전송되지 않은 내용은 입력창으로 되돌림
         setOutbox((prev) => prev.filter((m) => m.localId !== localId));
         setDraft((d) => d || content);
+        if (image) {
+          setAttachment((a) => {
+            if (!a) return image;
+            URL.revokeObjectURL(image.previewUrl);
+            return a;
+          });
+        }
         setLimitOpen(true);
         return;
       case "UNAUTHENTICATED":
@@ -156,9 +169,32 @@ export function ChatRoom({
     }
   }
 
+  async function pickImage(file: File) {
+    setImageError(null);
+    setImageState("preparing");
+    try {
+      const prepared = await prepareImage(file);
+      setAttachment((prev) => {
+        if (prev) URL.revokeObjectURL(prev.previewUrl);
+        return prepared;
+      });
+    } catch {
+      setImageError("This image format isn't supported.");
+    } finally {
+      setImageState("idle");
+    }
+  }
+
+  function removeImage() {
+    if (attachment) URL.revokeObjectURL(attachment.previewUrl);
+    setAttachment(null);
+    setImageError(null);
+  }
+
   function send() {
     const content = draft.trim();
-    if (!content || sending) return;
+    const image = attachment ?? undefined;
+    if ((!content && !image) || sending || imageState === "preparing") return;
     if (remaining <= 0) {
       setLimitOpen(true);
       return;
@@ -166,10 +202,12 @@ export function ChatRoom({
     const localId = crypto.randomUUID();
     setOutbox((prev) => [
       ...prev,
-      { localId, content, status: "sending", created_at: new Date().toISOString() },
+      { localId, content, image, status: "sending", created_at: new Date().toISOString() },
     ]);
     setDraft("");
-    void deliver(localId, content);
+    setAttachment(null);
+    setImageError(null);
+    void deliver(localId, content, image);
   }
 
   function resend(localId: string) {
@@ -180,10 +218,12 @@ export function ChatRoom({
       ...prev.filter((m) => m.localId !== localId),
       { ...item, status: "sending", error: undefined, created_at: new Date().toISOString() },
     ]);
-    void deliver(localId, item.content);
+    void deliver(localId, item.content, item.image);
   }
 
   function discard(localId: string) {
+    const item = outbox.find((m) => m.localId === localId);
+    if (item?.image) URL.revokeObjectURL(item.image.previewUrl);
     setOutbox((prev) => prev.filter((m) => m.localId !== localId));
   }
 
@@ -254,7 +294,17 @@ export function ChatRoom({
         />
       </div>
 
-      <ChatInput value={draft} onChange={setDraft} onSend={send} sending={sending} />
+      <ChatInput
+        value={draft}
+        onChange={setDraft}
+        onSend={send}
+        sending={sending}
+        image={attachment}
+        imageState={imageState}
+        imageError={imageError}
+        onPickImage={pickImage}
+        onRemoveImage={removeImage}
+      />
 
       <LimitDialog open={limitOpen} onOpenChange={setLimitOpen} limit={usage.limit} />
     </div>

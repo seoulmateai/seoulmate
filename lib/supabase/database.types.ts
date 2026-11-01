@@ -261,6 +261,9 @@ export type Database = {
           content: string
           created_at: string
           id: number
+          image_height: number | null
+          image_path: string | null
+          image_width: number | null
           role: string
           room_id: number
           turn_id: string
@@ -269,6 +272,9 @@ export type Database = {
           content: string
           created_at?: string
           id?: never
+          image_height?: number | null
+          image_path?: string | null
+          image_width?: number | null
           role: string
           room_id: number
           turn_id: string
@@ -277,6 +283,9 @@ export type Database = {
           content?: string
           created_at?: string
           id?: never
+          image_height?: number | null
+          image_path?: string | null
+          image_width?: number | null
           role?: string
           room_id?: number
           turn_id?: string

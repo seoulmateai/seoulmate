@@ -6,25 +6,37 @@ import Link from "next/link";
 import { Fragment } from "react";
 
 import { formatBubbleTime, formatDateDivider, sameDay, sameMinute } from "@/lib/chat/format";
-import type { ChatCharacter, ChatMessage, MessageRole } from "@/lib/chat/types";
+import { bubbleImageSize, type PreparedImage } from "@/lib/chat/image.client";
+import { chatImageUrl, type ChatCharacter, type ChatMessage, type MessageRole } from "@/lib/chat/types";
 import { useHydrated } from "@/lib/use-hydrated";
 import { cn } from "@/lib/utils";
 
 export type OutboxItem = {
   localId: string;
+  /** 사진만 보내면 '' */
   content: string;
+  image?: PreparedImage;
   status: "sending" | "failed";
   error?: string;
   created_at: string;
 };
 
+type BubbleImage = { src: string; width: number; height: number; href?: string };
+
 type Item = {
   key: string;
   role: MessageRole;
   content: string;
+  image?: BubbleImage;
   created_at: string;
   outbox?: OutboxItem;
 };
+
+function messageImage(m: ChatMessage): BubbleImage | undefined {
+  if (!m.image_path || !m.image_width || !m.image_height) return undefined;
+  const src = chatImageUrl(m.id);
+  return { src, width: m.image_width, height: m.image_height, href: src };
+}
 
 export function MessageList({
   character,
@@ -49,12 +61,18 @@ export function MessageList({
       key: `m${m.id}`,
       role: m.role,
       content: m.content,
+      image: messageImage(m),
       created_at: m.created_at,
     })),
     ...outbox.map((o) => ({
       key: `o${o.localId}`,
       role: "USER" as const,
       content: o.content,
+      image: o.image && {
+        src: o.image.previewUrl,
+        width: o.image.width,
+        height: o.image.height,
+      },
       created_at: o.created_at,
       outbox: o,
     })),
@@ -89,6 +107,7 @@ export function MessageList({
                 </AssistantRow>
               ) : (
                 <UserRow
+                  image={item.image}
                   time={item.outbox ? null : time}
                   outbox={item.outbox}
                   onResend={onResend}
@@ -169,12 +188,14 @@ function AssistantRow({
 }
 
 function UserRow({
+  image,
   time,
   outbox,
   onResend,
   onDiscard,
   children,
 }: {
+  image?: BubbleImage;
   time: string | null;
   outbox?: OutboxItem;
   onResend: (localId: string) => void;
@@ -208,11 +229,16 @@ function UserRow({
         {time && <BubbleTime>{time}</BubbleTime>}
         <div
           className={cn(
-            "max-w-[min(78%,560px)] rounded-[17px] rounded-br-[5px] bg-bubble-user px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap text-white max-md:max-w-[86%] max-md:px-3.5 max-md:py-2.5",
+            "flex max-w-[min(78%,560px)] flex-col items-end gap-1.5 max-md:max-w-[86%]",
             outbox?.status === "sending" && "opacity-70",
           )}
         >
-          {children}
+          {image && <PhotoBubble image={image} />}
+          {children && (
+            <div className="rounded-[17px] rounded-br-[5px] bg-bubble-user px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap text-white max-md:px-3.5 max-md:py-2.5">
+              {children}
+            </div>
+          )}
         </div>
       </div>
       {failed && outbox.error && (
@@ -228,6 +254,30 @@ function UserRow({
         </p>
       )}
     </div>
+  );
+}
+
+function PhotoBubble({ image }: { image: BubbleImage }) {
+  // 크기를 미리 알고 있어서 로드 전에도 자리를 차지 → 스크롤 위치가 밀리지 않음
+  const size = bubbleImageSize(image.width, image.height);
+  const img = (
+    <Image
+      src={image.src}
+      alt="Photo"
+      width={size.width}
+      height={size.height}
+      // 비공개 이미지: 서버 이미지 최적화를 거치지 않고 브라우저가 쿠키와 함께 직접 요청
+      unoptimized
+      className="block h-auto max-w-full rounded-[17px] rounded-br-[5px] bg-[#eee] object-cover"
+      style={{ aspectRatio: `${image.width} / ${image.height}` }}
+    />
+  );
+  return image.href ? (
+    <a href={image.href} target="_blank" rel="noopener" aria-label="Open photo">
+      {img}
+    </a>
+  ) : (
+    img
   );
 }
 
