@@ -16,7 +16,7 @@ const STATUS_STYLE: Record<string, string> = {
 
 export default function InquiryPage() {
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-5 pt-6 pb-12 md:pt-10">
+    <div className="page-container flex flex-col gap-6 pt-6 pb-12 *:max-w-2xl md:pt-10">
       <header className="flex items-center gap-1">
         <Link
           href="/settings"

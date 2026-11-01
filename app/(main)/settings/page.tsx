@@ -28,7 +28,7 @@ const LINKS = [
 
 export default function SettingsPage() {
   return (
-    <div className="mx-auto flex w-full max-w-[1180px] flex-1 flex-col px-4.5 pt-8 pb-6 md:px-7 md:pt-10 min-[850px]:px-14 min-[850px]:pt-14">
+    <div className="page-container flex flex-1 flex-col pt-8 pb-6 md:pt-10 min-[850px]:pt-14">
       <section className="mb-6 md:mb-7.5">
         <p className="mb-2.5 text-[11px] font-extrabold tracking-[2px] text-coral">YOUR ACCOUNT</p>
         <h1 className="mb-2 text-[32px] leading-[1.15] font-bold tracking-[-1.5px] md:text-[38px]">

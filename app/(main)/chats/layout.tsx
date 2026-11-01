@@ -8,7 +8,7 @@ import { getCharactersByIds } from "@/lib/characters";
 export default function ChatsLayout({ children }: LayoutProps<"/chats">) {
   return (
     // usePathname이 서스펜드될 때(동적 경로 prerender)를 위한 경계
-    <Suspense fallback={<div className="h-[calc(100dvh-var(--topbar-h))] bg-[#fafafa]" />}>
+    <Suspense fallback={<div className="h-[calc(100dvh-var(--topbar-h))]" />}>
       <ChatsWorkspace
         sidebar={
           <Suspense fallback={<ChatListSkeleton />}>

@@ -7,7 +7,6 @@
 @theme inline {
   --color-background: var(--background);
   --color-chat: #f7f6f6; /* 채팅방 배경 */
-  --color-canvas: #f7f7f8; /* 앱 바깥 배경 */
   --color-coral: #ff7772;
   --color-coral-dark: #f26360;
   --color-coral-soft: #fff1f0;
@@ -133,10 +132,26 @@
   }
   html {
     @apply font-sans;
+    /* 스크롤바 유무와 상관없이 같은 폭을 쓰도록 자리를 항상 확보 (페이지 이동 시 레이아웃 흔들림 방지) */
+    scrollbar-gutter: stable;
   }
 }
 @media (width >= 48rem) {
   :root {
     --topbar-h: 5.25rem;
+  }
+}
+
+/* 모든 페이지 공통 콘텐츠 폭 (상단 바·페이지 본문이 같은 좌우 기준선을 쓰도록) */
+@utility page-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1280px;
+  padding-inline: 1.25rem;
+  @media (width >= 48rem) {
+    padding-inline: 2.25rem;
+  }
+  @media (width >= 64rem) {
+    padding-inline: 4rem;
   }
 }

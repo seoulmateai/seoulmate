@@ -27,7 +27,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   if (!character?.isActive) notFound();
 
   return (
-    <div className="mx-auto flex w-full max-w-[1180px] flex-col px-5 pt-6 pb-12 md:px-14 md:pt-10 md:pb-20">
+    <div className="page-container flex flex-col pt-6 pb-12 md:pt-10 md:pb-20">
       <Link
         href="/"
         className="mb-6 inline-flex items-center gap-1 self-start text-[13px] font-semibold text-muted-foreground transition-colors hover:text-coral-dark"

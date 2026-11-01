@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${dmSans.variable} h-full antialiased`}>
-      <body className="min-h-full bg-canvas">
+      <body className="min-h-full bg-background">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

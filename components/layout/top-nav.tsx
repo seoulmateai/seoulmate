@@ -15,8 +15,9 @@ const TABS = [
   { href: "/settings", label: "My page" },
 ] as const;
 
-const HEADER_CLASS =
-  "flex h-(--topbar-h) shrink-0 items-center justify-between gap-4 border-b border-border px-5 md:px-16";
+// 테두리는 화면 전체 폭, 내용은 페이지와 같은 폭(page-container)에 맞춤
+const HEADER_CLASS = "h-(--topbar-h) shrink-0 border-b border-border";
+const HEADER_INNER_CLASS = "page-container flex h-full items-center justify-between gap-4";
 
 export function TopNav() {
   return <TopNavView pathname={usePathname()} />;
@@ -30,34 +31,36 @@ export function TopNavFallback() {
 function TopNavView({ pathname }: { pathname: string | null }) {
   return (
     <header className={HEADER_CLASS}>
-      <Link href="/" aria-label="seoulmate home" className="shrink-0">
-        <Image src={logo} alt="seoulmate" priority className="h-5 w-auto sm:h-6 md:h-7" />
-      </Link>
-      <nav aria-label="Main navigation" className="flex items-center gap-3 sm:gap-4 md:gap-8">
-        {TABS.map(({ href, label }) => {
-          const active =
-            pathname !== null && (href === "/" ? pathname === "/" : pathname.startsWith(href));
-          const className = cn(
-            "text-xs font-semibold transition-colors md:text-sm",
-            active ? "text-coral-dark" : "text-[#85858c] hover:text-coral-dark",
-          );
-          return href === "/" ? (
-            <Link key={href} href={href} aria-current={active ? "page" : undefined} className={className}>
-              {label}
-            </Link>
-          ) : (
-            <AuthGatedLink
-              key={href}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={className}
-            >
-              {label}
-            </AuthGatedLink>
-          );
-        })}
-        <ProfileButton />
-      </nav>
+      <div className={HEADER_INNER_CLASS}>
+        <Link href="/" aria-label="seoulmate home" className="shrink-0">
+          <Image src={logo} alt="seoulmate" priority className="h-5 w-auto sm:h-6 md:h-7" />
+        </Link>
+        <nav aria-label="Main navigation" className="flex items-center gap-3 sm:gap-4 md:gap-8">
+          {TABS.map(({ href, label }) => {
+            const active =
+              pathname !== null && (href === "/" ? pathname === "/" : pathname.startsWith(href));
+            const className = cn(
+              "text-xs font-semibold transition-colors md:text-sm",
+              active ? "text-coral-dark" : "text-[#85858c] hover:text-coral-dark",
+            );
+            return href === "/" ? (
+              <Link key={href} href={href} aria-current={active ? "page" : undefined} className={className}>
+                {label}
+              </Link>
+            ) : (
+              <AuthGatedLink
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={className}
+              >
+                {label}
+              </AuthGatedLink>
+            );
+          })}
+          <ProfileButton />
+        </nav>
+      </div>
     </header>
   );
 }

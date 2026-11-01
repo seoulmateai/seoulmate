@@ -17,7 +17,7 @@ export function ChatsWorkspace({
   const roomOpen = usePathname() !== "/chats";
 
   return (
-    <div className="grid h-[calc(100dvh-var(--topbar-h))] min-h-[520px] grid-rows-[minmax(0,1fr)] bg-[#fafafa] md:grid-cols-[280px_minmax(0,1fr)] md:gap-3 md:p-3 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-4.5 lg:p-4.5">
+    <div className="page-container grid h-[calc(100dvh-var(--topbar-h))] min-h-[520px] grid-rows-[minmax(0,1fr)] max-md:px-0 md:grid-cols-[280px_minmax(0,1fr)] md:gap-3 md:py-3 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-4.5 lg:py-4.5">
       <aside
         className={cn(
           "flex min-h-0 flex-col overflow-hidden bg-white md:rounded-[20px] md:border md:border-[#f0f0f1]",

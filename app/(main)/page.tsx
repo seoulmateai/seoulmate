@@ -16,7 +16,7 @@ export default async function DiscoverPage() {
   }));
 
   return (
-    <div className="flex flex-col px-5 pt-8 pb-10 md:px-9 md:pt-11 md:pb-14 min-[1050px]:px-16 min-[1050px]:pt-14 min-[1050px]:pb-18">
+    <div className="page-container flex flex-col pt-8 pb-10 md:pt-11 md:pb-14 min-[1050px]:pt-14 min-[1050px]:pb-18">
       <section className="mb-7 flex flex-col gap-3.5 md:mb-8.5 md:flex-row md:items-end md:justify-between md:gap-7">
         <div>
           <p className="mb-3 text-xs font-extrabold tracking-[2px] text-coral-dark uppercase">
