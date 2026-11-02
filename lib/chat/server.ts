@@ -45,15 +45,19 @@ export async function getOrCreateRoomId(
   const existing = await findRoomId();
   if (existing != null || !character.isActive) return existing;
 
-  const { error: upsertError } = await admin
+  // ⚠️ 여기서 findRoomId()를 다시 부르면 안 된다: 같은 URL의 GET fetch는 한 렌더 안에서
+  // Next.js가 메모이즈하므로 위의 "방 없음(null)" 응답이 그대로 재사용되어 404가 난다.
+  // upsert(POST)에서 바로 id를 돌려받는다. 동시 요청으로 이미 있으면 DO UPDATE(값 동일)로 기존 행 반환.
+  const { data, error } = await admin
     .from("chat_rooms")
     .upsert(
       { user_id: userId, character_id: character.id },
-      { onConflict: "user_id,character_id", ignoreDuplicates: true },
-    );
-  if (upsertError) throw upsertError;
-  // 동시 요청으로 다른 쪽이 먼저 만들었어도(ignoreDuplicates) 다시 조회하면 id를 얻는다
-  return findRoomId();
+      { onConflict: "user_id,character_id" },
+    )
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id;
 }
 
 /** 구독 여부에 따른 일일 한도. 결제가 꺼진 환경(Production)은 DB 조회 없이 무료 한도 */
