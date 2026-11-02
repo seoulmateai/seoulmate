@@ -1,6 +1,6 @@
 # seoulmate
 
-AI 캐릭터와 카톡처럼 1:1로 채팅하는 웹앱입니다. 기획과 기술스택은 [`spec.md`](./spec.md)를 참고하세요.
+AI 캐릭터와 카톡처럼 1:1로 채팅하는 웹앱입니다.
 
 스택: Next.js 16 (App Router) · Supabase (DB, 인증) · Gemini · Cloudflare R2 (이미지) · PostHog · Stripe (테스트 모드)
 
