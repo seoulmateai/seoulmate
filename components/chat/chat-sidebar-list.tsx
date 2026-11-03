@@ -59,7 +59,8 @@ export function ChatSidebarList({ items }: { items: ChatSidebarItem[] }) {
           </Link>
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-3.5 md:px-3">
+        // 모바일: 목록이 플로팅 하단 탭 뒤로 스크롤되므로 마지막 항목이 가려지지 않게 여백을 둔다
+        <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-(--bottomtab-h) md:px-3 md:pb-3.5">
           <p className="px-2.5 pt-3 pb-2 text-[10px] font-extrabold tracking-[1.2px] text-[#999aa1] uppercase">
             Recent conversations
           </p>

@@ -73,6 +73,8 @@
   --ring: #ff7772;
   /* 상단 바 높이 (채팅 화면 높이 계산에도 사용) */
   --topbar-h: 4.5rem;
+  /* 모바일 플로팅 탭에 가려지지 않게 비워 둘 높이 (탭 3.75rem + 아래 간격 1.125rem + 위 여유 0.5rem) */
+  --bottomtab-h: calc(5.375rem + env(safe-area-inset-bottom));
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
