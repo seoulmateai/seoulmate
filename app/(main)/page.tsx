@@ -2,7 +2,7 @@ import { CharacterGrid } from "@/components/discover/character-grid";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { getCharacters } from "@/lib/characters";
 
-export default async function DiscoverPage() {
+export default async function HomePage() {
   // 모든 사용자 공통 데이터 → 공유 캐시('use cache'). 카드에 필요한 필드만 전달
   const characters = await getCharacters();
   const cards = characters.map(({ id, name, age, occupation, bio, badge, avatar }) => ({

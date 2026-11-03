@@ -33,7 +33,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         className="mb-6 inline-flex items-center gap-1 self-start text-[13px] font-semibold text-muted-foreground transition-colors hover:text-coral-dark"
       >
         <ChevronLeft className="size-4" />
-        Back to Discover
+        Back to Home
       </Link>
 
       <div className="grid gap-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-center md:gap-14">

@@ -13,7 +13,7 @@ export default function ChatsPage() {
         Choose someone from the list, or meet someone new.
       </p>
       <Link href="/" className="text-sm font-bold text-coral-dark hover:underline">
-        Go to Discover →
+        Go to Home →
       </Link>
     </div>
   );
