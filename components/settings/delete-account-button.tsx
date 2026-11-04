@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { createClient } from "@/lib/supabase/client";
+import { signOutInThisTab } from "@/lib/auth/sign-out";
 
 export function DeleteAccountButton() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export function DeleteAccountButton() {
       return;
     }
     // 계정이 이미 삭제됐으므로 서버 호출 없이 브라우저 세션만 정리
-    await createClient().auth.signOut({ scope: "local" });
+    await signOutInThisTab({ scope: "local" });
     router.replace("/");
     router.refresh();
   }
