@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { DEFAULT_AFTER_LOGIN, safeNextPath } from "@/lib/auth/next-path";
+
 import type { Database } from "./database.types";
 
 // 로그인이 필요한 경로
@@ -48,9 +50,11 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (isLoggedIn && matches(pathname, AUTH_PATHS)) {
+    // next를 유지하되, next가 다시 /login이면 리다이렉트가 반복되므로 기본 경로로 보낸다
+    const target = new URL(safeNextPath(request.nextUrl.searchParams.get("next")), request.url);
     const url = request.nextUrl.clone();
-    url.pathname = "/chats";
-    url.search = "";
+    url.pathname = matches(target.pathname, AUTH_PATHS) ? DEFAULT_AFTER_LOGIN : target.pathname;
+    url.search = matches(target.pathname, AUTH_PATHS) ? "" : target.search;
     return redirectWithCookies(url, response);
   }
 

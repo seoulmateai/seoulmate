@@ -67,7 +67,11 @@ function ProfileButton() {
     return (
       <button
         type="button"
-        onClick={() => openLogin()}
+        onClick={() => {
+          // 홈에서 로그인하면 기본 경로(/chats)로, 그 외 공개 페이지에서는 보던 페이지로 돌아온다
+          const { pathname, search } = window.location;
+          openLogin(pathname === "/" ? undefined : pathname + search);
+        }}
         className="rounded-full bg-coral px-3 py-2 text-xs font-bold sm:px-4 text-white transition-colors hover:bg-coral-dark"
       >
         Log in
