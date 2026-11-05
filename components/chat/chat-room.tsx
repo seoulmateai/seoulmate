@@ -229,12 +229,12 @@ export function ChatRoom({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-chat">
-      <header className="flex h-[66px] shrink-0 items-center justify-between gap-3 border-b border-border bg-white px-3.5 md:h-[76px] md:px-6">
+      <header className="flex h-[66px] shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3.5 md:h-[76px] md:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/chats"
             aria-label="Back to chat list"
-            className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-[#eeeef0] text-[#85858c] hover:border-[#ffd0cc] hover:text-coral md:hidden"
+            className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-border text-muted-foreground hover:border-coral/40 hover:text-coral md:hidden"
           >
             <ChevronLeft className="size-5" />
           </Link>
@@ -243,7 +243,7 @@ export function ChatRoom({
             alt=""
             width={43}
             height={43}
-            className="size-[43px] shrink-0 rounded-full bg-[#eee] object-cover object-top"
+            className="size-[43px] shrink-0 rounded-full bg-muted object-cover object-top"
           />
           <div className="min-w-0">
             <p className="truncate text-base font-extrabold">{character.name}</p>
@@ -252,7 +252,7 @@ export function ChatRoom({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span
-            className="rounded-full bg-coral-soft px-2.5 py-1.5 text-[11px] font-bold text-coral-dark"
+            className="rounded-full bg-coral-soft px-2.5 py-1.5 text-[11px] font-bold text-coral"
             title="Free replies left today"
           >
             {remaining} / {usage.limit} left today
@@ -261,7 +261,7 @@ export function ChatRoom({
             href={`/characters/${character.id}`}
             aria-label={`${character.name}'s profile`}
             title="Character profile"
-            className="grid size-9 place-items-center rounded-[10px] border border-[#eeeef0] bg-white text-[#85858c] hover:border-[#ffd0cc] hover:text-coral"
+            className="grid size-9 place-items-center rounded-[10px] border border-border bg-background text-muted-foreground hover:border-coral/40 hover:text-coral"
           >
             <Info className="size-4" />
           </Link>
@@ -279,8 +279,8 @@ export function ChatRoom({
           </div>
         )}
         {!hasMore && messages.length === 0 && outbox.length === 0 && (
-          <p className="mt-10 text-center text-sm text-[#999]">
-            <strong className="mb-1.5 block text-[#555]">Your story starts here</strong>
+          <p className="mt-10 text-center text-sm text-muted-foreground">
+            <strong className="mb-1.5 block text-foreground">Your story starts here</strong>
             Say hi to {character.name}!
           </p>
         )}

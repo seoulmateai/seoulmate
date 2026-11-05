@@ -48,34 +48,34 @@ export default function SettingsPage() {
       <div className="grid items-start gap-4 min-[850px]:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.75fr)] min-[850px]:gap-6.5">
         <nav
           aria-label="Information and support"
-          className="overflow-hidden rounded-[18px] border border-[#e9e9ec] bg-white"
+          className="overflow-hidden rounded-[18px] border border-border bg-card"
         >
-          <ul className="divide-y divide-[#e9e9ec]">
+          <ul className="divide-y divide-border">
             {LINKS.map(({ href, label, description }) => (
               <li key={href}>
                 <Link
                   href={href}
-                  className="flex min-h-[65px] items-center justify-between gap-4.5 px-4.5 text-sm transition-colors hover:bg-[#fffafa] md:min-h-[76px] md:px-6 md:text-base"
+                  className="flex min-h-[65px] items-center justify-between gap-4.5 px-4.5 text-sm transition-colors hover:bg-muted md:min-h-[76px] md:px-6 md:text-base"
                 >
                   <span>
                     {label}
-                    <small className="mt-1 block text-[11px] text-[#999aa1]">{description}</small>
+                    <small className="mt-1 block text-[11px] text-muted-foreground">{description}</small>
                   </span>
-                  <ChevronRight className="size-5 shrink-0 text-[#85858c]" strokeWidth={1.5} />
+                  <ChevronRight className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
 
-        <section className="rounded-[18px] border border-[#e9e9ec] bg-white p-5 md:p-6">
+        <section className="rounded-[18px] border border-border bg-card p-5 md:p-6">
           <h2 className="mb-2 text-[15px] font-bold">Account actions</h2>
           <p className="mb-5 text-xs leading-relaxed text-muted-foreground">
             Sign out of your account or permanently remove it.
           </p>
           <SignOutButton />
           <DeleteAccountButton />
-          <p className="mt-6 border-t border-[#f0f0f1] pt-4.5 text-[11px] leading-relaxed text-[#a0a0a6]">
+          <p className="mt-6 border-t border-border pt-4.5 text-[11px] leading-relaxed text-muted-foreground">
             Account deletion is permanent. Your profile and chat history will no longer be
             available.
           </p>
@@ -98,7 +98,7 @@ async function ProfileCard() {
       <div className="flex min-w-0 flex-1 flex-col">
         <NicknameEditor nickname={profile.nickname} />
         <p className="truncate text-xs text-muted-foreground md:text-[15px]">{user.email}</p>
-        <p className="mt-2 text-[11px] text-[#a16d69]">Your seoulmate account</p>
+        <p className="mt-2 text-[11px] text-coral/80">Your seoulmate account</p>
       </div>
     </section>
   );

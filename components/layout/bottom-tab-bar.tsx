@@ -21,7 +21,7 @@ export function BottomTabBar() {
       {pathname !== "/chats" && <div aria-hidden className="h-(--bottomtab-h) shrink-0 md:hidden" />}
       <nav
         aria-label="Main navigation"
-        className="fixed bottom-[calc(1.125rem+env(safe-area-inset-bottom))] left-1/2 z-40 flex h-15 -translate-x-1/2 rounded-full border border-border bg-background p-1 shadow-[0_8px_24px_rgb(37_37_43/0.14)] md:hidden"
+        className="fixed bottom-[calc(1.125rem+env(safe-area-inset-bottom))] left-1/2 z-40 flex h-15 -translate-x-1/2 rounded-full border border-border bg-card p-1 shadow-[0_8px_24px_rgb(0_0_0/0.45)] md:hidden"
       >
         {MAIN_TABS.map(({ href, label, icon: Icon }) => {
           const active = isTabActive(href, pathname);
@@ -32,7 +32,7 @@ export function BottomTabBar() {
               aria-current={active ? "page" : undefined}
               className={cn(
                 "flex w-18 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-medium transition-colors",
-                active ? "bg-coral-soft text-coral-dark" : "text-[#85858c]",
+                active ? "bg-coral-soft text-coral" : "text-muted-foreground",
               )}
             >
               <Icon aria-hidden className="size-5" strokeWidth={active ? 1.8 : 1.8} />

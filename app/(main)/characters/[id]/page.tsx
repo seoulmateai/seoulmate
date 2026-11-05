@@ -30,14 +30,14 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     <div className="page-container flex flex-col pt-6 pb-12 md:pt-10 md:pb-20">
       <Link
         href="/"
-        className="mb-6 inline-flex items-center gap-1 self-start text-[13px] font-semibold text-muted-foreground transition-colors hover:text-coral-dark"
+        className="mb-6 inline-flex items-center gap-1 self-start text-[13px] font-semibold text-muted-foreground transition-colors hover:text-coral"
       >
         <ChevronLeft className="size-4" />
         Back to Home
       </Link>
 
       <div className="grid gap-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-center md:gap-14">
-        <div className="relative aspect-[4/5] overflow-hidden rounded-[19px] bg-[#e9e9ec]">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-[19px] border border-border bg-muted">
           <Image
             src={character.avatar.src}
             alt={`Portrait of ${character.name}`}
@@ -52,7 +52,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
 
         <div className="flex flex-col gap-6">
           <header>
-            <p className="mb-3 text-xs font-extrabold tracking-[2px] text-coral-dark uppercase">
+            <p className="mb-3 text-xs font-extrabold tracking-[2px] text-coral uppercase">
               {character.badge === "popular" ? "Popular" : "New face"}
             </p>
             <h1 className="mb-2 flex items-baseline gap-3 text-[clamp(32px,3.2vw,46px)] leading-[1.12] font-extrabold tracking-[-2px]">
@@ -68,16 +68,16 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
             {character.keywords.map((keyword) => (
               <li
                 key={keyword}
-                className="rounded-full border border-[#ffd2ce] bg-coral-soft px-3.5 py-2 text-xs font-bold text-coral-dark"
+                className="rounded-full border border-coral/30 bg-coral-soft px-3.5 py-2 text-xs font-bold text-coral"
               >
                 #{keyword}
               </li>
             ))}
           </ul>
 
-          <section className="rounded-[18px] border border-border p-6">
+          <section className="rounded-[18px] border border-border bg-card p-6">
             <h2 className="mb-2 text-[15px] font-bold">About {character.name}</h2>
-            <p className="text-[15px] leading-relaxed text-[#4b4a50]">{character.intro}</p>
+            <p className="text-[15px] leading-relaxed text-foreground/85">{character.intro}</p>
           </section>
 
           <AuthGatedLink

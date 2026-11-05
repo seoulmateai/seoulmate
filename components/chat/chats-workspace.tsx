@@ -20,7 +20,7 @@ export function ChatsWorkspace({
     <div className="page-container grid h-[calc(100dvh-var(--topbar-h))] min-h-[520px] grid-rows-[minmax(0,1fr)] max-md:px-0 md:grid-cols-[280px_minmax(0,1fr)] md:gap-3 md:py-3 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-4.5 lg:py-4.5">
       <aside
         className={cn(
-          "flex min-h-0 flex-col overflow-hidden bg-white md:rounded-[20px] md:border md:border-[#f0f0f1]",
+          "flex min-h-0 flex-col overflow-hidden bg-card md:rounded-[20px] md:border md:border-border",
           roomOpen && "max-md:hidden",
         )}
       >
@@ -29,7 +29,7 @@ export function ChatsWorkspace({
       <section
         aria-label="Conversation"
         className={cn(
-          "flex min-h-0 flex-col overflow-hidden bg-chat md:rounded-[20px] md:border md:border-[#f0f0f1]",
+          "flex min-h-0 flex-col overflow-hidden bg-chat md:rounded-[20px] md:border md:border-border",
           !roomOpen && "max-md:hidden",
         )}
       >

@@ -42,7 +42,7 @@ function TopNavView({ pathname }: { pathname: string | null }) {
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "text-sm font-semibold transition-colors",
-                    active ? "text-coral-dark" : "text-[#85858c] hover:text-coral-dark",
+                    active ? "text-coral" : "text-muted-foreground hover:text-coral",
                   )}
                 >
                   {label}

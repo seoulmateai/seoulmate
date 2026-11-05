@@ -56,7 +56,7 @@ export function NicknameEditor({ nickname }: { nickname: string }) {
         className="mb-1.5 flex min-w-0 items-center gap-2.5 text-left text-[19px] font-bold md:text-[23px]"
       >
         <span className="truncate">{nickname}</span>
-        <Pencil className="size-4 shrink-0 text-[#777]" aria-label="Edit nickname" />
+        <Pencil className="size-4 shrink-0 text-muted-foreground" aria-label="Edit nickname" />
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>

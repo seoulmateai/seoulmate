@@ -56,7 +56,7 @@ export function ChatInput({
       {(image || preparing || imageError) && (
         <div className="mb-2 flex items-end gap-2">
           {preparing && (
-            <div className="grid size-16 place-items-center rounded-xl border border-[#eeeef0] bg-white">
+            <div className="grid size-16 place-items-center rounded-xl border border-border bg-card">
               <Loader2 className="size-5 animate-spin text-primary/60" />
             </div>
           )}
@@ -68,12 +68,12 @@ export function ChatInput({
                 width={64}
                 height={64}
                 unoptimized
-                className="size-16 rounded-xl border border-[#eeeef0] object-cover"
+                className="size-16 rounded-xl border border-border object-cover"
               />
               <button
                 type="button"
                 aria-label="Remove photo"
-                className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-[#4b4a50] text-white hover:bg-black"
+                className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-foreground text-background hover:bg-foreground/80"
                 onClick={onRemoveImage}
               >
                 <X className="size-3" />
@@ -83,7 +83,7 @@ export function ChatInput({
           {imageError && <p className="text-xs text-destructive">{imageError}</p>}
         </div>
       )}
-      <div className="flex items-end gap-2.5 rounded-2xl border border-[#eeeef0] bg-white py-2 pr-2 pl-2 shadow-[0_4px_14px_rgba(30,25,30,0.04)] focus-within:border-[#ffd0cc]">
+      <div className="flex items-end gap-2.5 rounded-2xl border border-border bg-card py-2 pr-2 pl-2 focus-within:border-coral/60">
         <input
           ref={fileRef}
           type="file"
@@ -101,7 +101,7 @@ export function ChatInput({
           aria-label="Attach photo"
           title="Attach photo"
           disabled={sending || preparing}
-          className="grid size-[43px] shrink-0 place-items-center rounded-[13px] text-[#85858c] hover:text-coral disabled:opacity-50"
+          className="grid size-[43px] shrink-0 place-items-center rounded-[13px] text-muted-foreground hover:text-coral disabled:opacity-50"
           onClick={() => fileRef.current?.click()}
         >
           <ImagePlus className="size-5" />
@@ -113,7 +113,7 @@ export function ChatInput({
           maxLength={MAX_INPUT_LENGTH}
           placeholder="Write a message..."
           aria-label="Message"
-          className="min-h-[43px] flex-1 resize-none bg-transparent py-2.5 text-[13px] leading-6 text-[#444] outline-none placeholder:text-[#b4b4ba]"
+          className="min-h-[43px] flex-1 resize-none bg-transparent py-2.5 text-[13px] leading-6 text-foreground outline-none placeholder:text-muted-foreground"
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
             // Enter 전송, Shift+Enter 줄바꿈. 한글 조합 중 Enter는 무시
@@ -131,13 +131,13 @@ export function ChatInput({
             "grid size-[43px] shrink-0 place-items-center rounded-[13px] transition-colors",
             canSend
               ? "bg-coral text-white shadow-[0_4px_10px_#ff777244] hover:bg-coral-dark"
-              : "bg-[#f3f3f5] text-[#b4b4ba]",
+              : "bg-muted text-muted-foreground",
           )}
         >
           <SendHorizontal className="size-[18px]" />
         </button>
       </div>
-      <p className="mt-2.5 hidden text-center text-[9px] text-[#aaaab0] md:block">
+      <p className="mt-2.5 hidden text-center text-[9px] text-muted-foreground md:block">
         Your Seoul story continues with every message ♡
       </p>
     </form>

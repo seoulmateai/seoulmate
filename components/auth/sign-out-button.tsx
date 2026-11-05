@@ -21,7 +21,7 @@ export function SignOutButton() {
     <Button
       variant="outline"
       size="lg"
-      className="h-12 w-full rounded-[11px] border-[#e3e3e6] text-sm font-semibold hover:border-[#ffb4b0] hover:bg-[#fffafa] hover:text-coral"
+      className="h-12 w-full rounded-[11px] text-sm font-semibold hover:border-coral/40 hover:text-coral"
       disabled={pending}
       onClick={signOut}
     >
