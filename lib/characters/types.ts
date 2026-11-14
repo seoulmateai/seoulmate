@@ -30,7 +30,12 @@ export type CharacterPersona = {
   id: string;
   name: string;
   age: number;
+  /** 외모 묘사 (미입력이면 null) */
+  appearance: string | null;
+  /** 배경·세계관 */
   background: string;
+  /** 사용자와의 기본 관계 (미입력이면 null) */
+  relationship: string | null;
   personality: string;
   speechStyle: string;
   extraRules: string | null;

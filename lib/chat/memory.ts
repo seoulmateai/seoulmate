@@ -8,7 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { MessageRole } from "./types";
 
 // 장기 기억 (chat_rooms.memory_summary)
-// - 1턴 = 사용자 메시지 1개 + AI 답변(말풍선 1~3개). 같은 turn_id를 공유한다.
+// - 1턴 = 사용자 메시지 1개 + AI 답변 1개. 같은 turn_id를 공유한다.
+//   새 채팅방의 첫 만남 메시지는 사용자 메시지 없이 AI 메시지만 있는 턴.
 // - 답변 프롬프트에는 요약 + 최근 RECENT_TURNS턴 원문을 넣는다.
 // - 답변을 저장한 뒤 after()에서, 요약에 반영되지 않은 턴이 SUMMARY_EVERY_TURNS턴 이상이면
 //   그 턴들을 기존 요약에 합쳐 다시 쓰고 summarized_until_message_id(북마크)를 옮긴다.
@@ -23,7 +24,7 @@ const MAX_RAW_TURNS = 6;
 const SUMMARY_EVERY_TURNS = 3;
 /** 요약 1회에 넣는 최대 턴 수. 북마크가 없는 기존 대화방은 이보다 오래된 대화를 건너뛴다 */
 const MAX_SUMMARY_TURNS = 12;
-/** 사용자 1 + AI 말풍선 최대 3 (reply.ts MAX_BUBBLES) */
+/** 지금은 사용자 1 + AI 1이지만, 예전 메시지는 AI 답변이 말풍선별로 최대 3행이라 4로 둔다 */
 const MAX_MESSAGES_PER_TURN = 4;
 
 export type HistoryMessage = { role: MessageRole; content: string; hasImage: boolean };

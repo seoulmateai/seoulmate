@@ -115,7 +115,7 @@ async function getCharacterPersonaCached(id: string): Promise<CharacterPersona |
   const { data, error } = await createAdminClient()
     .from("characters")
     .select(
-      "id, name, age, background, personality, speech_style, extra_rules, persona_version, is_active",
+      "id, name, age, appearance, background, relationship, personality, speech_style, extra_rules, persona_version, is_active",
     )
     .eq("id", id)
     .maybeSingle();
@@ -125,7 +125,9 @@ async function getCharacterPersonaCached(id: string): Promise<CharacterPersona |
     id: data.id,
     name: data.name,
     age: data.age,
+    appearance: data.appearance,
     background: data.background,
+    relationship: data.relationship,
     personality: data.personality,
     speechStyle: data.speech_style,
     extraRules: data.extra_rules,

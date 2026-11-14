@@ -5,6 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Fragment } from "react";
 
+import {
+  parseMessageContent,
+  splitInlineEmphasis,
+  type ContentKind,
+} from "@/lib/chat/content";
 import { formatBubbleTime, formatDateDivider, sameDay, sameMinute } from "@/lib/chat/format";
 import { bubbleImageSize, type PreparedImage } from "@/lib/chat/image.client";
 import { chatImageUrl, type ChatCharacter, type ChatMessage, type MessageRole } from "@/lib/chat/types";
@@ -23,19 +28,40 @@ export type OutboxItem = {
 
 type BubbleImage = { src: string; width: number; height: number; href?: string };
 
+/** 화면 한 줄 = 메시지의 단락 하나 (묘사는 줄글, 대사는 말풍선) 또는 사진 */
 type Item = {
   key: string;
   role: MessageRole;
+  kind: ContentKind;
   content: string;
   image?: BubbleImage;
   created_at: string;
   outbox?: OutboxItem;
+  /** 메시지의 마지막 줄 (전송 실패 버튼은 여기에만) */
+  lastOfMessage: boolean;
 };
 
 function messageImage(m: ChatMessage): BubbleImage | undefined {
   if (!m.image_path || !m.image_width || !m.image_height) return undefined;
   const src = chatImageUrl(m.id);
   return { src, width: m.image_width, height: m.image_height, href: src };
+}
+
+/** 메시지 1개 → 사진(있으면) + 단락별 줄. 형식은 lib/chat/content.ts */
+function toItems(
+  key: string,
+  role: MessageRole,
+  content: string,
+  created_at: string,
+  image?: BubbleImage,
+  outbox?: OutboxItem,
+): Item[] {
+  const rows: Omit<Item, "lastOfMessage">[] = [];
+  if (image) rows.push({ key: `${key}-img`, role, kind: "DIALOGUE", content: "", image, created_at, outbox });
+  parseMessageContent(content).forEach((part, i) =>
+    rows.push({ key: `${key}-${i}`, role, kind: part.kind, content: part.text, created_at, outbox }),
+  );
+  return rows.map((row, i) => ({ ...row, lastOfMessage: i === rows.length - 1 }));
 }
 
 export function MessageList({
@@ -57,25 +83,19 @@ export function MessageList({
   const hydrated = useHydrated();
 
   const items: Item[] = [
-    ...messages.map((m) => ({
-      key: `m${m.id}`,
-      role: m.role,
-      content: m.content,
-      image: messageImage(m),
-      created_at: m.created_at,
-    })),
-    ...outbox.map((o) => ({
-      key: `o${o.localId}`,
-      role: "USER" as const,
-      content: o.content,
-      image: o.image && {
-        src: o.image.previewUrl,
-        width: o.image.width,
-        height: o.image.height,
-      },
-      created_at: o.created_at,
-      outbox: o,
-    })),
+    ...messages.flatMap((m) =>
+      toItems(`m${m.id}`, m.role, m.content, m.created_at, messageImage(m)),
+    ),
+    ...outbox.flatMap((o) =>
+      toItems(
+        `o${o.localId}`,
+        "USER",
+        o.content,
+        o.created_at,
+        o.image && { src: o.image.previewUrl, width: o.image.width, height: o.image.height },
+        o,
+      ),
+    ),
   ];
 
   return (
@@ -84,36 +104,48 @@ export function MessageList({
         const prev = items[i - 1];
         const next = items[i + 1];
         const newDay = hydrated && (!prev || !sameDay(prev.created_at, item.created_at));
-        // 같은 사람이 같은 분에 보낸 연속 메시지는 한 묶음 (프사는 첫 말풍선, 시각은 마지막 말풍선에만)
-        const startsGroup =
-          !prev ||
-          newDay ||
-          prev.role !== item.role ||
-          !sameMinute(prev.created_at, item.created_at);
-        const endsGroup =
-          !next ||
-          next.role !== item.role ||
-          !sameMinute(item.created_at, next.created_at) ||
-          (hydrated && !sameDay(item.created_at, next.created_at));
-        const time = hydrated && endsGroup ? formatBubbleTime(item.created_at) : null;
+        // 같은 사람이 같은 분에 보낸 연속 말풍선은 한 묶음 (프사는 첫 말풍선, 시각은 마지막 말풍선에만).
+        // 묘사 줄은 묶음을 끊는다 → 묘사 다음 말풍선에 다시 프사, 묘사 바로 앞 말풍선에 시각
+        const continues = (a: Item | undefined, b: Item | undefined) =>
+          !!a &&
+          !!b &&
+          a.role === b.role &&
+          a.kind === "DIALOGUE" &&
+          b.kind === "DIALOGUE" &&
+          sameMinute(a.created_at, b.created_at) &&
+          (!hydrated || sameDay(a.created_at, b.created_at));
+        const startsGroup = newDay || !continues(prev, item);
+        const endsGroup = !continues(item, next);
+        const narration = item.kind === "NARRATION";
+        const time =
+          hydrated && endsGroup && (!narration || item.lastOfMessage)
+            ? formatBubbleTime(item.created_at)
+            : null;
 
         return (
           <Fragment key={item.key}>
             {newDay && <DateDivider iso={item.created_at} />}
-            <li className={cn("flex", startsGroup ? "mt-4" : "mt-1.5")}>
+            <li className={cn("flex", startsGroup ? (narration ? "mt-3" : "mt-4") : "mt-1.5")}>
               {item.role === "ASSISTANT" ? (
-                <AssistantRow character={character} showProfile={startsGroup} time={time}>
-                  {item.content}
+                <AssistantRow
+                  character={character}
+                  kind={item.kind}
+                  showProfile={startsGroup && !narration}
+                  time={time}
+                >
+                  <RichText kind={item.kind} text={item.content} />
                 </AssistantRow>
               ) : (
                 <UserRow
+                  kind={item.kind}
                   image={item.image}
                   time={item.outbox ? null : time}
                   outbox={item.outbox}
+                  showOutboxControls={item.lastOfMessage}
                   onResend={onResend}
                   onDiscard={onDiscard}
                 >
-                  {item.content}
+                  {item.content && <RichText kind={item.kind} text={item.content} />}
                 </UserRow>
               )}
             </li>
@@ -141,17 +173,51 @@ function DateDivider({ iso }: { iso: string }) {
   );
 }
 
+/** 묘사는 말풍선 없이 줄글, 대사 말풍선 안의 *강조*는 기울임 */
+function RichText({ kind, text }: { kind: ContentKind; text: string }) {
+  if (kind === "NARRATION") return <>{text}</>;
+  return (
+    <>
+      {splitInlineEmphasis(text).map((s, i) =>
+        s.emphasis ? (
+          <em key={i} className="opacity-80">
+            {s.text}
+          </em>
+        ) : (
+          <Fragment key={i}>{s.text}</Fragment>
+        ),
+      )}
+    </>
+  );
+}
+
+const NARRATION_CLASS =
+  "px-1 text-[13px] leading-[1.75] break-words whitespace-pre-wrap text-muted-foreground italic";
+
 function AssistantRow({
   character,
+  kind = "DIALOGUE",
   showProfile,
   time,
   children,
 }: {
   character: ChatCharacter;
+  kind?: ContentKind;
   showProfile: boolean;
   time: string | null;
   children: React.ReactNode;
 }) {
+  if (kind === "NARRATION") {
+    return (
+      // 프사 자리만큼 들여서 말풍선과 왼쪽 선을 맞춘다
+      <div className="flex w-full items-end gap-2 pl-[41px]">
+        <p className={cn(NARRATION_CLASS, "max-w-[min(86%,640px)] max-md:max-w-full")}>
+          {children}
+        </p>
+        {time && <BubbleTime>{time}</BubbleTime>}
+      </div>
+    );
+  }
   return (
     // 프사는 말풍선 윗선에 맞춤, 시각은 말풍선 아랫선에 맞춤
     <div className="flex w-full items-start gap-2.5">
@@ -188,21 +254,26 @@ function AssistantRow({
 }
 
 function UserRow({
+  kind,
   image,
   time,
   outbox,
+  showOutboxControls,
   onResend,
   onDiscard,
   children,
 }: {
+  kind: ContentKind;
   image?: BubbleImage;
   time: string | null;
   outbox?: OutboxItem;
+  /** 한 메시지가 여러 줄로 나뉘면 마지막 줄에만 재전송·삭제 버튼 */
+  showOutboxControls: boolean;
   onResend: (localId: string) => void;
   onDiscard: (localId: string) => void;
   children: React.ReactNode;
 }) {
-  const failed = outbox?.status === "failed";
+  const failed = showOutboxControls && outbox?.status === "failed";
   return (
     <div className="flex w-full flex-col items-end gap-1">
       <div className="flex w-full items-end justify-end gap-1.5">
@@ -234,11 +305,14 @@ function UserRow({
           )}
         >
           {image && <PhotoBubble image={image} />}
-          {children && (
-            <div className="rounded-[17px] rounded-br-[5px] bg-bubble-user px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap text-white max-md:px-3.5 max-md:py-2.5">
-              {children}
-            </div>
-          )}
+          {children &&
+            (kind === "NARRATION" ? (
+              <p className={cn(NARRATION_CLASS, "text-right")}>{children}</p>
+            ) : (
+              <div className="rounded-[17px] rounded-br-[5px] bg-bubble-user px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap text-white max-md:px-3.5 max-md:py-2.5">
+                {children}
+              </div>
+            ))}
         </div>
       </div>
       {failed && outbox.error && (

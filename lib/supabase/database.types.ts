@@ -17,6 +17,7 @@ export type Database = {
       characters: {
         Row: {
           age: number
+          appearance: string | null
           avatar_path: string
           background: string
           badge: string
@@ -24,6 +25,7 @@ export type Database = {
           blur_data_url: string | null
           created_at: string
           extra_rules: string | null
+          first_meeting: string | null
           id: string
           intro: string
           is_active: boolean
@@ -32,12 +34,14 @@ export type Database = {
           occupation: string
           persona_version: number
           personality: string
+          relationship: string | null
           sort_order: number
           speech_style: string
           updated_at: string
         }
         Insert: {
           age: number
+          appearance?: string | null
           avatar_path: string
           background: string
           badge?: string
@@ -45,6 +49,7 @@ export type Database = {
           blur_data_url?: string | null
           created_at?: string
           extra_rules?: string | null
+          first_meeting?: string | null
           id?: string
           intro: string
           is_active?: boolean
@@ -53,12 +58,14 @@ export type Database = {
           occupation: string
           persona_version?: number
           personality: string
+          relationship?: string | null
           sort_order?: number
           speech_style: string
           updated_at?: string
         }
         Update: {
           age?: number
+          appearance?: string | null
           avatar_path?: string
           background?: string
           badge?: string
@@ -66,6 +73,7 @@ export type Database = {
           blur_data_url?: string | null
           created_at?: string
           extra_rules?: string | null
+          first_meeting?: string | null
           id?: string
           intro?: string
           is_active?: boolean
@@ -74,6 +82,7 @@ export type Database = {
           occupation?: string
           persona_version?: number
           personality?: string
+          relationship?: string | null
           sort_order?: number
           speech_style?: string
           updated_at?: string
@@ -453,6 +462,10 @@ export type Database = {
       }
       consume_reply_quota: {
         Args: { p_limit: number; p_user_id: string }
+        Returns: number
+      }
+      create_chat_room: {
+        Args: { p_character_id: string; p_user_id: string }
         Returns: number
       }
       refund_reply_quota: { Args: { p_user_id: string }; Returns: undefined }

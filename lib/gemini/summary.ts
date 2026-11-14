@@ -102,6 +102,7 @@ function buildSystemInstruction(characterName: string, nickname: string) {
   return `You maintain the long-term memory of an ongoing story-like chat between ${characterName} (the character) and ${nickname} (the user).
 
 You receive the previous memory and the newest part of the conversation. Output the complete updated memory, merging the new information into the previous memory.
+In the conversation, paragraphs wrapped in *asterisks* are narration (actions and situation), and the rest is spoken dialogue.
 
 # Keep
 - Facts about ${nickname}: life, job, family, friends, pets, likes and dislikes, worries, goals.

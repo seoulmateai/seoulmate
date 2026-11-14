@@ -40,17 +40,14 @@ export async function getOrCreateRoomId(
 
   // ⚠️ 여기서 findRoomId()를 다시 부르면 안 된다: 같은 URL의 GET fetch는 한 렌더 안에서
   // Next.js가 메모이즈하므로 위의 "방 없음(null)" 응답이 그대로 재사용되어 404가 난다.
-  // upsert(POST)에서 바로 id를 돌려받는다. 동시 요청으로 이미 있으면 DO UPDATE(값 동일)로 기존 행 반환.
-  const { data, error } = await admin
-    .from("chat_rooms")
-    .upsert(
-      { user_id: userId, character_id: character.id },
-      { onConflict: "user_id,character_id" },
-    )
-    .select("id")
-    .single();
+  // RPC(POST)에서 바로 id를 돌려받는다. 새로 만들어진 방에는 캐릭터의 첫 만남 메시지도 함께 저장되고,
+  // 동시 요청으로 이미 있으면 기존 방 id만 반환한다 (첫 만남 메시지 중복 없음).
+  const { data, error } = await admin.rpc("create_chat_room", {
+    p_user_id: userId,
+    p_character_id: character.id,
+  });
   if (error) throw error;
-  return data.id;
+  return data;
 }
 
 export async function getDailyUsage(userId: string): Promise<DailyUsage> {

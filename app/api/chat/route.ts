@@ -156,7 +156,7 @@ export async function POST(request: Request) {
   }
 
   // 5. user/assistant 메시지 저장 (한 문장으로 같이 저장 → 실패 시 둘 다 없음)
-  //    chat_rooms.last_message_* 는 DB 트리거가 갱신
+  //    AI 답장은 묘사+대사를 한 행에 (lib/chat/content.ts 형식). chat_rooms.last_message_* 는 DB 트리거가 갱신
   const { data: saved, error: saveError } = await admin
     .from("messages")
     .insert([
@@ -169,12 +169,12 @@ export async function POST(request: Request) {
         image_width: image?.width,
         image_height: image?.height,
       },
-      ...reply.bubbles.map((bubble) => ({
+      {
         room_id: roomId,
         turn_id: turnId,
         role: "ASSISTANT",
-        content: bubble,
-      })),
+        content: reply.content,
+      },
     ])
     .select(MESSAGE_COLUMNS)
     .order("id");
@@ -210,7 +210,9 @@ export async function POST(request: Request) {
     character_id: character.id,
     has_image: imagePath != null,
     content_length: content.length,
-    bubble_count: reply.bubbles.length,
+    narration_count: reply.counts.NARRATION,
+    dialogue_count: reply.counts.DIALOGUE,
+    reply_length: reply.content.length,
     latency_ms: Date.now() - startedAt,
     input_tokens: reply.usage.input,
     output_tokens: reply.usage.output,
