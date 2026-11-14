@@ -1,8 +1,8 @@
 "use client";
 
-import { ImagePlus, Loader2, SendHorizontal, X } from "lucide-react";
+import { Asterisk, ImagePlus, Loader2, SendHorizontal, X } from "lucide-react";
 import Image from "next/image";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { MAX_INPUT_LENGTH } from "@/lib/chat/constants";
 import type { PreparedImage } from "@/lib/chat/image.client";
@@ -36,6 +36,24 @@ export function ChatInput({
   const fileRef = useRef<HTMLInputElement>(null);
   const preparing = imageState === "preparing";
   const canSend = (value.trim().length > 0 || image != null) && !sending && !preparing;
+  // * 버튼으로 묘사 구간을 연 상태 (다시 누르면 닫는 * 입력). 입력창이 비면 자동으로 풀린다
+  const [narrating, setNarrating] = useState(false);
+  if (narrating && value === "") setNarrating(false);
+
+  function insertAsterisk() {
+    const el = ref.current;
+    const start = el?.selectionStart ?? value.length;
+    const end = el?.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + "*" + value.slice(end);
+    if (next.length > MAX_INPUT_LENGTH) return;
+    onChange(next);
+    setNarrating(!narrating);
+    // 값이 반영된 뒤 커서를 넣은 * 바로 뒤로
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(start + 1, start + 1);
+    });
+  }
 
   // 내용에 맞춰 높이 자동 조절
   useLayoutEffect(() => {
@@ -123,6 +141,32 @@ export function ChatInput({
             }
           }}
         />
+        {/* 전송 버튼에 붙여서 묶음처럼 보이게 (입력창 행의 gap-2.5를 줄임) */}
+        <div className="relative -mr-2 shrink-0">
+          {narrating && (
+            <div
+              role="status"
+              className="absolute right-0 bottom-full mb-2.5 rounded-lg bg-foreground px-2.5 py-1.5 text-[11px] whitespace-nowrap text-background shadow-md animate-in fade-in slide-in-from-bottom-1 motion-reduce:animate-none"
+            >
+              Use for describing actions or the scene.
+              <span className="absolute top-full right-4 size-2 -translate-y-1 rotate-45 bg-foreground" />
+            </div>
+          )}
+          <button
+            type="button"
+            aria-label={narrating ? "Close action description" : "Start action description"}
+            aria-pressed={narrating}
+            // 누를 때 입력창 포커스를 빼앗지 않음 (모바일 키보드 유지)
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={insertAsterisk}
+            className={cn(
+              "grid size-[43px] place-items-center rounded-[13px] transition-colors",
+              narrating ? "text-coral" : "text-muted-foreground hover:text-coral",
+            )}
+          >
+            <Asterisk className="size-5" strokeWidth={2.5} />
+          </button>
+        </div>
         <button
           type="submit"
           aria-label="Send message"

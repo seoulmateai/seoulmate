@@ -9,6 +9,7 @@ import {
   parseMessageContent,
   splitInlineEmphasis,
   type ContentKind,
+  type ContentPart,
 } from "@/lib/chat/content";
 import { formatBubbleTime, formatDateDivider, sameDay, sameMinute } from "@/lib/chat/format";
 import { bubbleImageSize, type PreparedImage } from "@/lib/chat/image.client";
@@ -26,6 +27,12 @@ export type OutboxItem = {
   created_at: string;
 };
 
+/**
+ * 새 답장 공개 진행: parts(= parseMessageContent(content)) 중 step번째 단락까지 보임.
+ * 그 단락은 chars 글자까지 (0이면 아직 안 보임, 대사는 0 아니면 전체)
+ */
+export type RevealState = { messageId: number; parts: ContentPart[]; step: number; chars: number };
+
 type BubbleImage = { src: string; width: number; height: number; href?: string };
 
 /** 화면 한 줄 = 메시지의 단락 하나 (묘사는 줄글, 대사는 말풍선) 또는 사진 */
@@ -39,6 +46,8 @@ type Item = {
   outbox?: OutboxItem;
   /** 메시지의 마지막 줄 (전송 실패 버튼은 여기에만) */
   lastOfMessage: boolean;
+  /** 공개 중인 답장의 줄 (등장 애니메이션, 시각 숨김) */
+  revealing?: boolean;
 };
 
 function messageImage(m: ChatMessage): BubbleImage | undefined {
@@ -64,11 +73,23 @@ function toItems(
   return rows.map((row, i) => ({ ...row, lastOfMessage: i === rows.length - 1 }));
 }
 
+/** 공개 중인 답장은 지금까지 보인 단락만 남긴다. AI 답장은 사진이 없어서 줄 번호 = 단락 번호 */
+function applyReveal(rows: Item[], { step, chars }: RevealState): Item[] {
+  return rows.slice(0, step + 1).flatMap((row, i) => {
+    if (i < step) return [{ ...row, revealing: true }];
+    if (chars === 0) return [];
+    const content =
+      row.kind === "NARRATION" ? Array.from(row.content).slice(0, chars).join("") : row.content;
+    return [{ ...row, content, revealing: true }];
+  });
+}
+
 export function MessageList({
   character,
   messages,
   outbox,
   typing,
+  reveal,
   onResend,
   onDiscard,
 }: {
@@ -76,16 +97,21 @@ export function MessageList({
   messages: ChatMessage[];
   outbox: OutboxItem[];
   typing: boolean;
+  reveal: RevealState | null;
   onResend: (localId: string) => void;
   onDiscard: (localId: string) => void;
 }) {
   // 날짜·시각은 사용자 시간대 기준이라 하이드레이션 이후에만 표시
   const hydrated = useHydrated();
+  // 다음 대사 말풍선을 기다리는 중이면 타이핑 점
+  const revealWaiting =
+    !!reveal && reveal.chars === 0 && reveal.parts[reveal.step]?.kind === "DIALOGUE";
 
   const items: Item[] = [
-    ...messages.flatMap((m) =>
-      toItems(`m${m.id}`, m.role, m.content, m.created_at, messageImage(m)),
-    ),
+    ...messages.flatMap((m) => {
+      const rows = toItems(`m${m.id}`, m.role, m.content, m.created_at, messageImage(m));
+      return m.id === reveal?.messageId ? applyReveal(rows, reveal) : rows;
+    }),
     ...outbox.flatMap((o) =>
       toItems(
         `o${o.localId}`,
@@ -97,6 +123,12 @@ export function MessageList({
       ),
     ),
   ];
+
+  const showTyping = typing || revealWaiting;
+  // 앞 줄이 같은 묶음의 AI 말풍선이면 타이핑 점도 그 묶음에 이어 붙인다 (프사 없이)
+  const last = items.at(-1);
+  const typingContinues =
+    revealWaiting && !typing && last?.role === "ASSISTANT" && last.kind === "DIALOGUE";
 
   return (
     <ol className="flex flex-col">
@@ -118,14 +150,21 @@ export function MessageList({
         const endsGroup = !continues(item, next);
         const narration = item.kind === "NARRATION";
         const time =
-          hydrated && endsGroup && (!narration || item.lastOfMessage)
+          !item.revealing && hydrated && endsGroup && (!narration || item.lastOfMessage)
             ? formatBubbleTime(item.created_at)
             : null;
 
         return (
           <Fragment key={item.key}>
             {newDay && <DateDivider iso={item.created_at} />}
-            <li className={cn("flex", startsGroup ? (narration ? "mt-3" : "mt-4") : "mt-1.5")}>
+            <li
+              className={cn(
+                "flex",
+                startsGroup ? (narration ? "mt-3" : "mt-4") : "mt-1.5",
+                item.revealing &&
+                  "animate-in duration-300 fade-in slide-in-from-bottom-1 motion-reduce:animate-none",
+              )}
+            >
               {item.role === "ASSISTANT" ? (
                 <AssistantRow
                   character={character}
@@ -152,9 +191,9 @@ export function MessageList({
           </Fragment>
         );
       })}
-      {typing && (
-        <li className="mt-4 flex">
-          <AssistantRow character={character} showProfile time={null}>
+      {showTyping && (
+        <li className={cn("flex", typingContinues ? "mt-1.5" : "mt-4")}>
+          <AssistantRow character={character} showProfile={!typingContinues} time={null}>
             <TypingDots />
           </AssistantRow>
         </li>
@@ -298,12 +337,7 @@ function UserRow({
           </div>
         )}
         {time && <BubbleTime>{time}</BubbleTime>}
-        <div
-          className={cn(
-            "flex max-w-[min(78%,560px)] flex-col items-end gap-1.5 max-md:max-w-[86%]",
-            outbox?.status === "sending" && "opacity-70",
-          )}
-        >
+        <div className="flex max-w-[min(78%,560px)] flex-col items-end gap-1.5 max-md:max-w-[86%]">
           {image && <PhotoBubble image={image} />}
           {children &&
             (kind === "NARRATION" ? (

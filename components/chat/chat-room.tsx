@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { MESSAGE_PAGE_SIZE } from "@/lib/chat/constants";
+import { parseMessageContent } from "@/lib/chat/content";
 import { prepareImage, type PreparedImage } from "@/lib/chat/image.client";
 import {
   MESSAGE_COLUMNS,
@@ -19,7 +20,21 @@ import { createClient } from "@/lib/supabase/client";
 
 import { ChatInput } from "./chat-input";
 import { LimitDialog } from "./limit-dialog";
-import { MessageList, type OutboxItem } from "./message-list";
+import { MessageList, type OutboxItem, type RevealState } from "./message-list";
+
+// ???듭옣 怨듦컻 ?띾룄: 臾섏궗??湲???⑥쐞濡???댄븨, ??щ뒗 ??댄븨 ?먯쓣 ?좉퉸 蹂댁뿬以 ??留먰뭾???깆옣
+const TICK_MS = 30;
+const MIN_CHARS_PER_TICK = 2;
+/** 湲?臾섏궗?????쒓컙 ?덉뿉 ???⑥??꾨줉 ???깆쓽 湲???섎? ?섎┛??*/
+const NARRATION_MAX_MS = 1500;
+const DIALOGUE_DELAY_MIN_MS = 400;
+const DIALOGUE_DELAY_MAX_MS = 700;
+/** ?⑤씫 ?ъ씠 ?? 留먰뭾???깆옣 ?좊땲硫붿씠??300ms)蹂대떎 吏㏃쑝硫?留덉?留?留먰뭾???좊땲硫붿씠?섏씠 ?딄릿??*/
+const PART_PAUSE_MS = 300;
+
+function canAnimate() {
+  return !document.hidden && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
 
 const ERROR_TEXT: Record<string, string> = {
   BLOCKED: "This message couldn't be answered. Try saying it differently.",
@@ -44,7 +59,7 @@ export function ChatRoom({
   const [messages, setMessages] = useState(initialMessages);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loadingOlder, setLoadingOlder] = useState(false);
-  // 서버에 아직 저장되지 않은(전송 중·실패) 내 메시지
+  // ?쒕쾭???꾩쭅 ??λ릺吏 ?딆?(?꾩넚 以뫢룹떎?? ??硫붿떆吏
   const [outbox, setOutbox] = useState<OutboxItem[]>([]);
   const [usage, setUsage] = useState(initialUsage);
   const [limitOpen, setLimitOpen] = useState(false);
@@ -52,16 +67,18 @@ export function ChatRoom({
   const [attachment, setAttachment] = useState<PreparedImage | null>(null);
   const [imageState, setImageState] = useState<"idle" | "preparing">("idle");
   const [imageError, setImageError] = useState<string | null>(null);
+  // 諛⑷툑 諛쏆? ?듭옣???⑤씫蹂꾨줈 蹂댁뿬二쇰뒗 以묒씠硫?吏꾪뻾 ?곹깭
+  const [reveal, setReveal] = useState<RevealState | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
-  // 이전 메시지를 위에 붙일 때 보던 위치를 유지하기 위한 값
+  // ?댁쟾 硫붿떆吏瑜??꾩뿉 遺숈씪 ??蹂대뜕 ?꾩튂瑜??좎??섍린 ?꾪븳 媛?
   const prependAnchor = useRef<{ height: number; top: number } | null>(null);
 
   const sending = outbox.some((m) => m.status === "sending");
   const remaining = Math.max(usage.limit - usage.used, 0);
 
-  // 스크롤 위치: 이전 메시지 로드 → 위치 유지 / 그 외(첫 진입, 새 메시지) → 맨 아래
+  // ?ㅽ겕濡??꾩튂: ?댁쟾 硫붿떆吏 濡쒕뱶 ???꾩튂 ?좎? / 洹???泥?吏꾩엯, ??硫붿떆吏) ??留??꾨옒
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -72,7 +89,38 @@ export function ChatRoom({
     } else {
       el.scrollTop = el.scrollHeight;
     }
-  }, [messages, outbox]);
+  }, [messages, outbox, reveal]);
+
+  // ?듭옣 怨듦컻 吏꾪뻾: ???④퀎????대㉧濡??ㅼ쓬 ?곹깭濡??섍릿??
+  useEffect(() => {
+    if (!reveal) return;
+    const { parts, step, chars } = reveal;
+    const len = Array.from(parts[step].text).length;
+    let next: RevealState | null;
+    let delay: number;
+    if (chars >= len) {
+      next = step + 1 < parts.length ? { ...reveal, step: step + 1, chars: 0 } : null;
+      delay = PART_PAUSE_MS;
+    } else if (parts[step].kind === "DIALOGUE") {
+      next = { ...reveal, chars: len };
+      delay = Math.min(DIALOGUE_DELAY_MAX_MS, DIALOGUE_DELAY_MIN_MS + len * 8);
+    } else {
+      const perTick = Math.max(MIN_CHARS_PER_TICK, Math.ceil((len * TICK_MS) / NARRATION_MAX_MS));
+      next = { ...reveal, chars: Math.min(len, chars + perTick) };
+      delay = TICK_MS;
+    }
+    const timer = setTimeout(() => setReveal(next), delay);
+    return () => clearTimeout(timer);
+  }, [reveal]);
+
+  // 怨듦컻 以묒뿉 ??쓣 ?좊굹硫?諛붾줈 ?꾨? 蹂댁뿬以??(諛깃렇?쇱슫????대㉧???먮젮吏?
+  const revealing = reveal !== null;
+  useEffect(() => {
+    if (!revealing) return;
+    const onVisibility = () => document.hidden && setReveal(null);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [revealing]);
 
   const loadOlder = useCallback(async () => {
     const el = scrollRef.current;
@@ -96,7 +144,7 @@ export function ChatRoom({
     setMessages((prev) => [...older, ...prev]);
   }, [messages, hasMore, loadingOlder, roomId]);
 
-  // 맨 위 센티넬이 보이면 이전 메시지 로드
+  // 留????쇳떚?ъ씠 蹂댁씠硫??댁쟾 硫붿떆吏 濡쒕뱶
   useEffect(() => {
     const root = scrollRef.current;
     const target = topSentinelRef.current;
@@ -127,8 +175,15 @@ export function ChatRoom({
       if (image) URL.revokeObjectURL(image.previewUrl);
       setOutbox((prev) => prev.filter((m) => m.localId !== localId));
       setMessages((prev) => [...prev, ...body.messages]);
+      const reply = [...body.messages].reverse().find((m) => m.role === "ASSISTANT");
+      const parts = reply ? parseMessageContent(reply.content) : [];
+      setReveal(
+        reply && parts.length > 0 && canAnimate()
+          ? { messageId: reply.id, parts, step: 0, chars: 0 }
+          : null,
+      );
       setUsage(body.usage);
-      // 왼쪽 대화 목록의 마지막 메시지·시각 갱신
+      // ?쇱そ ???紐⑸줉??留덉?留?硫붿떆吏쨌?쒓컖 媛깆떊
       router.refresh();
       return;
     }
@@ -136,7 +191,7 @@ export function ChatRoom({
     if (body?.usage) setUsage(body.usage);
     switch (body?.error) {
       case "LIMIT_REACHED":
-        // 전송되지 않은 내용은 입력창으로 되돌림
+        // ?꾩넚?섏? ?딆? ?댁슜? ?낅젰李쎌쑝濡??섎룎由?
         setOutbox((prev) => prev.filter((m) => m.localId !== localId));
         setDraft((d) => d || content);
         if (image) {
@@ -200,6 +255,8 @@ export function ChatRoom({
       return;
     }
     const localId = crypto.randomUUID();
+    // ?댁쟾 ?듭옣???꾩쭅 蹂댁뿬二쇰뒗 以묒씠硫??⑥? ?댁슜??諛붾줈 ??蹂댁뿬以??
+    setReveal(null);
     setOutbox((prev) => [
       ...prev,
       { localId, content, image, status: "sending", created_at: new Date().toISOString() },
@@ -213,7 +270,8 @@ export function ChatRoom({
   function resend(localId: string) {
     const item = outbox.find((m) => m.localId === localId);
     if (!item || sending) return;
-    // 다시 보내면 맨 아래로 이동
+    setReveal(null);
+    // ?ㅼ떆 蹂대궡硫?留??꾨옒濡??대룞
     setOutbox((prev) => [
       ...prev.filter((m) => m.localId !== localId),
       { ...item, status: "sending", error: undefined, created_at: new Date().toISOString() },
@@ -289,6 +347,7 @@ export function ChatRoom({
           messages={messages}
           outbox={outbox}
           typing={sending}
+          reveal={reveal}
           onResend={resend}
           onDiscard={discard}
         />
