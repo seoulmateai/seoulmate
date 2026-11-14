@@ -134,7 +134,7 @@ export function MessageList({
 function DateDivider({ iso }: { iso: string }) {
   return (
     <li className="mt-6 mb-1 flex justify-center">
-      <span className="rounded-full bg-white px-3 py-1.5 text-[10px] text-[#a5a5ab]">
+      <span className="rounded-full border border-border bg-card px-3 py-1.5 text-[10px] text-muted-foreground">
         {formatDateDivider(iso)}
       </span>
     </li>
@@ -167,7 +167,7 @@ function AssistantRow({
               alt=""
               width={31}
               height={31}
-              className="size-[31px] rounded-full bg-[#eee] object-cover object-top"
+              className="size-[31px] rounded-full bg-muted object-cover object-top"
             />
           </Link>
         )}
@@ -175,7 +175,7 @@ function AssistantRow({
       <div className="flex min-w-0 flex-1 items-end gap-2">
         <div
           className={cn(
-            "max-w-[min(78%,560px)] rounded-[17px] bg-white px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap text-[#4b4a50] shadow-[0_2px_7px_rgba(30,25,30,0.025)] max-md:max-w-[86%] max-md:px-3.5 max-md:py-2.5",
+            "max-w-[min(78%,560px)] rounded-[17px] border border-border bg-card px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap text-foreground max-md:max-w-[86%] max-md:px-3.5 max-md:py-2.5",
             showProfile && "rounded-tl-[5px]",
           )}
         >
@@ -268,7 +268,7 @@ function PhotoBubble({ image }: { image: BubbleImage }) {
       height={size.height}
       // 비공개 이미지: 서버 이미지 최적화를 거치지 않고 브라우저가 쿠키와 함께 직접 요청
       unoptimized
-      className="block h-auto max-w-full rounded-[17px] rounded-br-[5px] bg-[#eee] object-cover"
+      className="block h-auto max-w-full rounded-[17px] rounded-br-[5px] bg-muted object-cover"
       style={{ aspectRatio: `${image.width} / ${image.height}` }}
     />
   );
@@ -282,7 +282,7 @@ function PhotoBubble({ image }: { image: BubbleImage }) {
 }
 
 function BubbleTime({ children }: { children: React.ReactNode }) {
-  return <span className="shrink-0 pb-1 text-[10px] whitespace-nowrap text-[#a3a3aa]">{children}</span>;
+  return <span className="shrink-0 pb-1 text-[10px] whitespace-nowrap text-muted-foreground">{children}</span>;
 }
 
 function TypingDots() {

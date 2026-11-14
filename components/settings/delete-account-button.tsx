@@ -41,7 +41,7 @@ export function DeleteAccountButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mx-auto mt-3.5 block p-2 text-[13px] text-[#888b93] underline-offset-4 hover:text-[#d65c58] hover:underline md:mt-4.5"
+        className="mx-auto mt-3.5 block p-2 text-[13px] text-muted-foreground underline-offset-4 hover:text-destructive hover:underline md:mt-4.5"
       >
         Delete account
       </button>

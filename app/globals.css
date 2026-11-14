@@ -6,11 +6,11 @@
 
 @theme inline {
   --color-background: var(--background);
-  --color-chat: #f7f6f6; /* 채팅방 배경 */
+  --color-chat: #101014; /* 채팅방 배경 */
   --color-coral: #ff7772;
   --color-coral-dark: #f26360;
-  --color-coral-soft: #fff1f0;
-  --color-bubble-user: #ff8c86;
+  --color-coral-soft: rgb(255 119 114 / 14%);
+  --color-bubble-user: #ff7772;
   --color-foreground: var(--foreground);
   --font-sans: var(--font-dm-sans);
   --font-heading: var(--font-dm-sans);
@@ -52,77 +52,45 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: #25252b;
-  --card: oklch(1 0 0);
-  --card-foreground: #25252b;
-  --popover: oklch(1 0 0);
-  --popover-foreground: #25252b;
+/* Dark-only palette. `.dark` matches `html.dark` so it wins over the default theme. */
+:root,
+.dark {
+  --background: #0c0c10;
+  --foreground: #f4f4f5;
+  --card: #16161c;
+  --card-foreground: #f4f4f5;
+  --popover: #1a1a22;
+  --popover-foreground: #f4f4f5;
   --primary: #ff7772; /* logo coral */
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: #f7f7f8;
-  --muted-foreground: #777982;
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: #eeeef0;
-  --input: #e9e9ec;
+  --primary-foreground: #ffffff;
+  --secondary: #1e1e26;
+  --secondary-foreground: #f4f4f5;
+  --muted: #1a1a22;
+  --muted-foreground: #9b9ba3;
+  --accent: #241c1e;
+  --accent-foreground: #f4f4f5;
+  --destructive: #e35d5d;
+  --border: rgb(255 255 255 / 10%);
+  --input: rgb(255 255 255 / 14%);
   --ring: #ff7772;
   /* 상단 바 높이 (채팅 화면 높이 계산에도 사용) */
   --topbar-h: 4.5rem;
   /* 모바일 플로팅 탭에 가려지지 않게 비워 둘 높이 (탭 3.75rem + 아래 간격 1.125rem + 위 여유 0.5rem) */
   --bottomtab-h: calc(5.375rem + env(safe-area-inset-bottom));
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --chart-1: #ff7772;
+  --chart-2: #9b9ba3;
+  --chart-3: #6e6e78;
+  --chart-4: #3a3a44;
+  --chart-5: #24242c;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: #121218;
+  --sidebar-foreground: #f4f4f5;
+  --sidebar-primary: #ff7772;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e1e26;
+  --sidebar-accent-foreground: #f4f4f5;
+  --sidebar-border: rgb(255 255 255 / 10%);
+  --sidebar-ring: #ff7772;
 }
 
 @layer base {
@@ -134,6 +102,7 @@
   }
   html {
     @apply font-sans;
+    color-scheme: dark;
     /* 스크롤바 유무와 상관없이 같은 폭을 쓰도록 자리를 항상 확보 (페이지 이동 시 레이아웃 흔들림 방지) */
     scrollbar-gutter: stable;
   }

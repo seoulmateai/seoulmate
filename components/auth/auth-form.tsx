@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
+import { DemoLoginButton } from "./demo-login-button";
+
 const schema = z.object({
   email: z.email("Please enter a valid email."),
   password: z.string().min(8, "Password must be at least 8 characters."),
@@ -110,6 +112,7 @@ export function AuthForm({ next }: { next: string }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <DemoLoginButton next={next} disabled={busy} />
       <Button
         type="button"
         variant="outline"

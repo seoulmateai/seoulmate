@@ -8,11 +8,11 @@ export default function ChatsPage() {
       <div className="mb-1 grid size-14 place-items-center rounded-full bg-coral-soft text-coral">
         <MessageCircle className="size-6" />
       </div>
-      <strong className="text-base text-[#55545b]">Pick a conversation</strong>
+      <strong className="text-base text-foreground">Pick a conversation</strong>
       <p className="text-sm text-muted-foreground">
         Choose someone from the list, or meet someone new.
       </p>
-      <Link href="/" className="text-sm font-bold text-coral-dark hover:underline">
+      <Link href="/" className="text-sm font-bold text-coral hover:underline">
         Go to Home →
       </Link>
     </div>
