@@ -1,18 +1,21 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getCharacterPersona } from "@/lib/characters";
 import { MAX_IMAGE_BYTES, MAX_INPUT_LENGTH } from "@/lib/chat/constants";
 import { normalizeImage, type NormalizedImage } from "@/lib/chat/image.server";
+import { loadChatContext, maybeUpdateMemory } from "@/lib/chat/memory";
 import { freeDailyLimit, getOrCreateRoomId } from "@/lib/chat/server";
 import { MESSAGE_COLUMNS, type ChatApiResponse, type ChatMessage } from "@/lib/chat/types";
-import { CONTEXT_MESSAGE_COUNT, generateReply, geminiModel } from "@/lib/gemini/reply";
+import { geminiModel } from "@/lib/gemini/client";
+import { generateReply } from "@/lib/gemini/reply";
 import { captureServerEvent } from "@/lib/posthog/server";
 import { deleteChatImage, putChatImage } from "@/lib/r2/chat-images";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-export const maxDuration = 30;
+// 답변(최대 25초) 후 after()의 장기 기억 요약(최대 20초)까지 이 시간 안에 끝나야 한다
+export const maxDuration = 60;
 
 // multipart/form-data: characterId, content, image(선택). 텍스트와 사진 중 하나는 있어야 함
 const bodySchema = z
@@ -88,14 +91,12 @@ export async function POST(request: Request) {
   const usage = { used, limit };
   const refund = () => admin.rpc("refund_reply_quota", { p_user_id: user.id });
 
-  // 3. 캐릭터 프롬프트 + 최근 메시지로 Gemini 호출
-  const { data: recent, error: historyError } = await admin
-    .from("messages")
-    .select("role, content, image_path")
-    .eq("room_id", roomId)
-    .order("id", { ascending: false })
-    .limit(CONTEXT_MESSAGE_COUNT);
-  if (historyError) {
+  // 3. 캐릭터 프롬프트 + 장기 기억(요약) + 최근 대화 원문으로 Gemini 호출
+  let context: Awaited<ReturnType<typeof loadChatContext>>;
+  try {
+    context = await loadChatContext(roomId);
+  } catch (e) {
+    console.error("[chat] loadChatContext failed", e);
     await refund();
     return json({ ok: false, error: "SERVER_ERROR" }, 500);
   }
@@ -105,11 +106,8 @@ export async function POST(request: Request) {
   const reply = await generateReply({
     character,
     nickname: profile.nickname,
-    history: recent.reverse().map((m) => ({
-      role: m.role === "USER" ? "USER" : "ASSISTANT",
-      content: m.content,
-      hasImage: m.image_path != null,
-    })),
+    memory: context.memory,
+    history: context.history,
     userMessage: content,
     userImage: image?.data,
   });
@@ -196,6 +194,17 @@ export async function POST(request: Request) {
     ]);
     return json({ ok: false, error: "SERVER_ERROR", usage: { used: used - 1, limit } }, 500);
   }
+
+  // 6. 응답을 보낸 뒤 장기 기억 갱신 (조건이 안 되면 DB 조회 2번만 하고 끝)
+  after(() =>
+    maybeUpdateMemory({
+      roomId,
+      userId: user.id,
+      turnId,
+      character,
+      nickname: profile.nickname,
+    }),
+  );
 
   captureServerEvent(user.id, "chat_message_sent", {
     character_id: character.id,
