@@ -280,7 +280,7 @@ function AssistantRow({
       <div className="flex min-w-0 flex-1 items-end gap-2">
         <div
           className={cn(
-            "max-w-[min(78%,560px)] rounded-[17px] border border-border bg-card px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap text-foreground max-md:max-w-[86%] max-md:px-3.5 max-md:py-2.5",
+            "max-w-[min(78%,560px)] rounded-[17px] border border-white/12 bg-bubble-ai px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap text-foreground max-md:max-w-[86%] max-md:px-3.5 max-md:py-2.5",
             showProfile && "rounded-tl-[5px]",
           )}
         >
@@ -343,7 +343,7 @@ function UserRow({
             (kind === "NARRATION" ? (
               <p className={cn(NARRATION_CLASS, "text-right")}>{children}</p>
             ) : (
-              <div className="rounded-[17px] rounded-br-[5px] bg-bubble-user px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap text-white max-md:px-3.5 max-md:py-2.5">
+              <div className="rounded-[17px] rounded-br-[5px] border border-coral/25 bg-bubble-user px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap text-bubble-user-foreground max-md:px-3.5 max-md:py-2.5">
                 {children}
               </div>
             ))}

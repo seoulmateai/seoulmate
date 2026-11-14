@@ -6,11 +6,13 @@
 
 @theme inline {
   --color-background: var(--background);
-  --color-chat: #101014; /* 채팅방 배경 */
+  --color-chat: #18181d; /* 채팅방 배경 */
   --color-coral: #ff7772;
   --color-coral-dark: #f26360;
   --color-coral-soft: rgb(255 119 114 / 14%);
-  --color-bubble-user: #ff7772;
+  --color-bubble-user: #43282b; /* 코랄 톤 (차분하지만 배경과 확실히 구분되는 밝기) */
+  --color-bubble-user-foreground: #ffe4e1; /* 연한 핑크 글자 */
+  --color-bubble-ai: #23232b; /* 채팅방 배경(#18181d)과 구분되는 밝기 */
   --color-foreground: var(--foreground);
   --font-sans: var(--font-dm-sans);
   --font-heading: var(--font-dm-sans);
@@ -55,23 +57,23 @@
 /* Dark-only palette. `.dark` matches `html.dark` so it wins over the default theme. */
 :root,
 .dark {
-  --background: #0c0c10;
+  --background: #131318;
   --foreground: #f4f4f5;
-  --card: #16161c;
+  --card: #1e1e25;
   --card-foreground: #f4f4f5;
-  --popover: #1a1a22;
+  --popover: #23232b;
   --popover-foreground: #f4f4f5;
   --primary: #ff7772; /* logo coral */
   --primary-foreground: #ffffff;
-  --secondary: #1e1e26;
+  --secondary: #282830;
   --secondary-foreground: #f4f4f5;
-  --muted: #1a1a22;
-  --muted-foreground: #9b9ba3;
-  --accent: #241c1e;
+  --muted: #23232b;
+  --muted-foreground: #a6a6ae;
+  --accent: #2e2426;
   --accent-foreground: #f4f4f5;
   --destructive: #e35d5d;
-  --border: rgb(255 255 255 / 10%);
-  --input: rgb(255 255 255 / 14%);
+  --border: rgb(255 255 255 / 12%);
+  --input: rgb(255 255 255 / 16%);
   --ring: #ff7772;
   /* 상단 바 높이 (채팅 화면 높이 계산에도 사용) */
   --topbar-h: 4.5rem;
@@ -81,15 +83,15 @@
   --chart-2: #9b9ba3;
   --chart-3: #6e6e78;
   --chart-4: #3a3a44;
-  --chart-5: #24242c;
+  --chart-5: #2c2c34;
   --radius: 0.625rem;
-  --sidebar: #121218;
+  --sidebar: #1a1a20;
   --sidebar-foreground: #f4f4f5;
   --sidebar-primary: #ff7772;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1e1e26;
+  --sidebar-accent: #282830;
   --sidebar-accent-foreground: #f4f4f5;
-  --sidebar-border: rgb(255 255 255 / 10%);
+  --sidebar-border: rgb(255 255 255 / 12%);
   --sidebar-ring: #ff7772;
 }
 
