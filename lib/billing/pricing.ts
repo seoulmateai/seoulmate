@@ -8,6 +8,10 @@
 
 export const POINTS_PER_RUBY = 5000;
 export const WON_PER_RUBY = 100;
+/** 판매하는 루비 팩 (Polar 상품 ID는 env POLAR_PRODUCT_RUBY_{팩}) */
+export const RUBY_PACKS = [50, 100, 150] as const;
+export type RubyPack = (typeof RUBY_PACKS)[number];
+
 /** 하루 무료 루비 기본값 (env FREE_DAILY_RUBIES로 변경) */
 export const DEFAULT_FREE_DAILY_RUBIES = 10;
 

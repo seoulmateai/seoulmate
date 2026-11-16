@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  // Polar SDK는 선택 기능(OpenTelemetry 등)을 동적 import로 불러와서 번들링하면
+  // 설치 안 된 패키지를 찾다가 실패함 → 번들링하지 않고 Node가 직접 import
+  // (@polar-sh/nextjs는 next/server를 확장자 없이 import해서 external로 두면 안 됨)
+  serverExternalPackages: ["@polar-sh/sdk"],
   images: {
     // 캐릭터 이미지 (Cloudflare R2 공개 버킷). 커스텀 도메인 연결 시 여기에 추가
     remotePatterns: [{ protocol: "https", hostname: "*.r2.dev", pathname: "/characters/**" }],
