@@ -183,6 +183,7 @@ export async function POST(request: Request) {
     input_tokens: reply.usage.input,
     cached_input_tokens: reply.usage.cachedInput,
     output_tokens: reply.usage.output,
+    thought_tokens: reply.usage.thoughts,
   });
 
   if (saveError) {

@@ -154,6 +154,7 @@ export async function maybeUpdateMemory({
             input_tokens: result.usage.input,
             cached_input_tokens: result.usage.cachedInput,
             output_tokens: result.usage.output,
+            thought_tokens: result.usage.thoughts,
           }
         : { error_code: result.errorCode }),
     });

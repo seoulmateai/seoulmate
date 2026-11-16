@@ -35,7 +35,8 @@ export function geminiModel() {
   return model;
 }
 
-export type LlmUsage = { input?: number; cachedInput?: number; output?: number };
+/** output = candidatesTokenCount, thoughts = thoughtsTokenCount (thinking, 출력 요금으로 청구) */
+export type LlmUsage = { input?: number; cachedInput?: number; output?: number; thoughts?: number };
 
 export type LlmFailure = { status: "BLOCKED" | "FAILED" | "TIMEOUT"; errorCode: string };
 

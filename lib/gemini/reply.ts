@@ -125,6 +125,7 @@ export async function generateReply({
         input: res.usageMetadata?.promptTokenCount,
         cachedInput: res.usageMetadata?.cachedContentTokenCount,
         output: res.usageMetadata?.candidatesTokenCount,
+        thoughts: res.usageMetadata?.thoughtsTokenCount,
       },
     };
   } catch (e) {

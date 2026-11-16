@@ -208,9 +208,12 @@ export type Database = {
           provider: string
           purpose: string
           room_id: number | null
+          rubies_charged: number | null
           status: string
+          thought_tokens: number | null
           turn_id: string | null
           user_id: string | null
+          weighted_points: number | null
         }
         Insert: {
           cached_input_tokens?: number | null
@@ -226,9 +229,12 @@ export type Database = {
           provider?: string
           purpose?: string
           room_id?: number | null
+          rubies_charged?: number | null
           status: string
+          thought_tokens?: number | null
           turn_id?: string | null
           user_id?: string | null
+          weighted_points?: number | null
         }
         Update: {
           cached_input_tokens?: number | null
@@ -244,9 +250,12 @@ export type Database = {
           provider?: string
           purpose?: string
           room_id?: number | null
+          rubies_charged?: number | null
           status?: string
+          thought_tokens?: number | null
           turn_id?: string | null
           user_id?: string | null
+          weighted_points?: number | null
         }
         Relationships: [
           {
@@ -402,6 +411,95 @@ export type Database = {
           },
         ]
       }
+      ruby_transactions: {
+        Row: {
+          created_at: string
+          free_balance_after: number
+          free_delta: number
+          id: number
+          llm_call_id: number | null
+          paid_balance_after: number
+          paid_delta: number
+          polar_order_id: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          free_balance_after: number
+          free_delta?: number
+          id?: never
+          llm_call_id?: number | null
+          paid_balance_after: number
+          paid_delta?: number
+          polar_order_id?: string | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          free_balance_after?: number
+          free_delta?: number
+          id?: never
+          llm_call_id?: number | null
+          paid_balance_after?: number
+          paid_delta?: number
+          polar_order_id?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ruby_transactions_llm_call_id_fkey"
+            columns: ["llm_call_id"]
+            isOneToOne: false
+            referencedRelation: "llm_calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ruby_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ruby_wallets: {
+        Row: {
+          free_balance: number
+          free_date: string | null
+          paid_balance: number
+          pending_points: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          free_balance?: number
+          free_date?: string | null
+          paid_balance?: number
+          pending_points?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          free_balance?: number
+          free_date?: string | null
+          paid_balance?: number
+          pending_points?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ruby_wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_counters: {
         Row: {
           reply_count: number
@@ -433,6 +531,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      charge_ruby_usage: {
+        Args: {
+          p_free_daily: number
+          p_llm_call_id?: number
+          p_points: number
+          p_user_id: string
+        }
+        Returns: {
+          free_balance: number
+          paid_balance: number
+          pending_points: number
+          rubies_charged: number
+        }[]
+      }
       complete_onboarding: {
         Args: {
           p_birth_date: string
@@ -468,7 +580,28 @@ export type Database = {
         Args: { p_character_id: string; p_user_id: string }
         Returns: number
       }
+      credit_rubies: {
+        Args: {
+          p_amount: number
+          p_order_id?: string
+          p_type?: string
+          p_user_id: string
+        }
+        Returns: number
+      }
+      get_ruby_wallet: {
+        Args: { p_free_daily: number; p_user_id: string }
+        Returns: {
+          free_balance: number
+          paid_balance: number
+          pending_points: number
+        }[]
+      }
       refund_reply_quota: { Args: { p_user_id: string }; Returns: undefined }
+      refund_rubies: {
+        Args: { p_amount: number; p_order_id: string; p_user_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "node --test \"lib/**/*.test.mjs\"",
     "typecheck": "next typegen && tsc --noEmit",
-    "db:types": "npx supabase gen types typescript --linked > lib/supabase/database.types.ts"
+    "db:types": "npx supabase gen types typescript --remote > lib/supabase/database.types.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1161.0",
