@@ -4,27 +4,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/supabase/database.types";
 
-import { DEFAULT_FREE_DAILY_RUBIES, toPoints, type TokenUsage } from "./pricing";
+import { DEFAULT_FREE_DAILY_RUBIES, toPoints, type RubyWallet, type TokenUsage } from "./pricing";
 
 // 루비 지갑 (DB 함수 래퍼). 잔액 계산·차감 규칙은 supabase/migrations/20261116000000_rubies.sql
 // 모두 service role(createAdminClient) 전용
 
 type Admin = SupabaseClient<Database>;
 
-export type Wallet = { free: number; paid: number; pendingPoints: number };
-
 export function freeDailyRubies() {
   const n = Number(process.env.FREE_DAILY_RUBIES);
   return Number.isInteger(n) && n >= 0 ? n : DEFAULT_FREE_DAILY_RUBIES;
 }
 
-/** 쓸 수 있는 루비가 1개 이상인지 */
-export function canSpend(wallet: Wallet) {
-  return wallet.free + wallet.paid >= 1;
-}
-
 /** 현재 잔액 (오늘 무료 루비를 아직 안 채웠으면 채워진 값으로) */
-export async function getWallet(admin: Admin, userId: string): Promise<Wallet> {
+export async function getWallet(admin: Admin, userId: string): Promise<RubyWallet> {
   const { data, error } = await admin
     .rpc("get_ruby_wallet", { p_user_id: userId, p_free_daily: freeDailyRubies() })
     .single();
@@ -44,7 +37,7 @@ export async function chargeUsage(
     model,
     llmCallId,
   }: { userId: string; usage: TokenUsage; model: string; llmCallId?: number | null },
-): Promise<{ charged: number; wallet: Wallet }> {
+): Promise<{ charged: number; wallet: RubyWallet }> {
   const { data, error } = await admin
     .rpc("charge_ruby_usage", {
       p_user_id: userId,

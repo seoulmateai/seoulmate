@@ -11,6 +11,14 @@ export const WON_PER_RUBY = 100;
 /** 하루 무료 루비 기본값 (env FREE_DAILY_RUBIES로 변경) */
 export const DEFAULT_FREE_DAILY_RUBIES = 10;
 
+/** 루비 잔액. free = 오늘 남은 무료 루비, paid = 충전한 루비, pendingPoints = 다음 1루비까지 쌓인 점수 */
+export type RubyWallet = { free: number; paid: number; pendingPoints: number };
+
+/** 쓸 수 있는 루비가 1개 이상인지 */
+export function canSpend(wallet: RubyWallet) {
+  return wallet.free + wallet.paid >= 1;
+}
+
 export type TokenWeights = { input: number; output: number };
 
 export const DEFAULT_WEIGHTS: TokenWeights = { input: 1, output: 8 };

@@ -1,3 +1,5 @@
+import type { RubyWallet } from "@/lib/billing/pricing";
+
 export type MessageRole = "USER" | "ASSISTANT";
 
 export type ChatMessage = {
@@ -29,11 +31,9 @@ export type ChatCharacter = {
   avatar: string;
 };
 
-export type DailyUsage = { used: number; limit: number };
-
-/** POST /api/chat 응답 */
+/** POST /api/chat 응답. wallet = 답변 과금 후 루비 잔액 (요약 과금은 응답 뒤라 다음 응답에 반영) */
 export type ChatApiResponse =
-  | { ok: true; messages: ChatMessage[]; usage: DailyUsage }
+  | { ok: true; messages: ChatMessage[]; wallet: RubyWallet }
   | {
       ok: false;
       error:
@@ -41,9 +41,9 @@ export type ChatApiResponse =
         | "ONBOARDING_REQUIRED"
         | "INVALID_REQUEST"
         | "INVALID_IMAGE"
-        | "LIMIT_REACHED"
+        | "INSUFFICIENT_RUBY"
         | "BLOCKED"
         | "LLM_FAILED"
         | "SERVER_ERROR";
-      usage?: DailyUsage;
+      wallet?: RubyWallet;
     };

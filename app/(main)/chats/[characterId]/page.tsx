@@ -5,8 +5,10 @@ import { ChatRoom } from "@/components/chat/chat-room";
 import { requireOnboardedUser } from "@/lib/auth/session";
 import { getCharacter, getCharacters } from "@/lib/characters";
 import { MESSAGE_PAGE_SIZE } from "@/lib/chat/constants";
-import { getDailyUsage, getOrCreateRoomId } from "@/lib/chat/server";
+import { getWallet } from "@/lib/billing/wallet";
+import { getOrCreateRoomId } from "@/lib/chat/server";
 import { MESSAGE_COLUMNS, type ChatMessage } from "@/lib/chat/types";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function generateStaticParams() {
   const characters = await getCharacters();
@@ -32,14 +34,14 @@ async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">
   const roomId = await getOrCreateRoomId(user.id, character);
   if (roomId == null) notFound();
 
-  const [{ data: rows }, usage] = await Promise.all([
+  const [{ data: rows }, wallet] = await Promise.all([
     supabase
       .from("messages")
       .select(MESSAGE_COLUMNS)
       .eq("room_id", roomId)
       .order("id", { ascending: false })
       .limit(MESSAGE_PAGE_SIZE + 1),
-    getDailyUsage(user.id),
+    getWallet(createAdminClient(), user.id),
   ]);
   const latest = (rows ?? []) as ChatMessage[];
 
@@ -54,7 +56,7 @@ async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">
       }}
       initialMessages={latest.slice(0, MESSAGE_PAGE_SIZE).reverse()}
       initialHasMore={latest.length > MESSAGE_PAGE_SIZE}
-      initialUsage={usage}
+      initialWallet={wallet}
     />
   );
 }

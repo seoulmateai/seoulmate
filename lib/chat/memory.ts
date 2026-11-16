@@ -1,5 +1,6 @@
 import "server-only";
 
+import { chargeUsage } from "@/lib/billing/wallet";
 import type { CharacterPersona } from "@/lib/characters";
 import { geminiModel } from "@/lib/gemini/client";
 import { generateSummary } from "@/lib/gemini/summary";
@@ -139,28 +140,38 @@ export async function maybeUpdateMemory({
       messages: turns.flatMap((t) => t.messages),
     });
 
-    const { error: logError } = await admin.from("llm_calls").insert({
-      user_id: userId,
-      room_id: roomId,
-      turn_id: turnId,
-      purpose: "SUMMARY",
-      model: geminiModel(),
-      character_id: character.id,
-      persona_version: character.personaVersion,
-      latency_ms: Date.now() - startedAt,
-      status: result.status,
-      ...(result.status === "SUCCESS"
-        ? {
-            input_tokens: result.usage.input,
-            cached_input_tokens: result.usage.cachedInput,
-            output_tokens: result.usage.output,
-            thought_tokens: result.usage.thoughts,
-          }
-        : { error_code: result.errorCode }),
-    });
+    const model = geminiModel();
+    const { data: logged, error: logError } = await admin
+      .from("llm_calls")
+      .insert({
+        user_id: userId,
+        room_id: roomId,
+        turn_id: turnId,
+        purpose: "SUMMARY",
+        model,
+        character_id: character.id,
+        persona_version: character.personaVersion,
+        latency_ms: Date.now() - startedAt,
+        status: result.status,
+        ...(result.status === "SUCCESS"
+          ? {
+              input_tokens: result.usage.input,
+              cached_input_tokens: result.usage.cachedInput,
+              output_tokens: result.usage.output,
+              thought_tokens: result.usage.thoughts,
+            }
+          : { error_code: result.errorCode }),
+      })
+      .select("id")
+      .single();
     if (logError) console.error("[memory] llm_calls insert failed", logError);
 
     if (result.status !== "SUCCESS") return;
+
+    // 요약도 답변과 같은 기준으로 과금 (잔액이 없으면 0에서 멈춤). 실패해도 요약 저장은 계속
+    await chargeUsage(admin, { userId, usage: result.usage, model, llmCallId: logged?.id }).catch((e) =>
+      console.error("[memory] charge_ruby_usage failed", e),
+    );
 
     // 북마크가 읽은 값 그대로일 때만 저장 → 동시에 두 번 돌아도 한 번만 반영
     let update = admin

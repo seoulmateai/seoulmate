@@ -1,11 +1,13 @@
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { canSpend, type RubyWallet } from "@/lib/billing/pricing";
+import { chargeUsage, getWallet } from "@/lib/billing/wallet";
 import { getCharacterPersona } from "@/lib/characters";
 import { MAX_IMAGE_BYTES, MAX_INPUT_LENGTH } from "@/lib/chat/constants";
 import { normalizeImage, type NormalizedImage } from "@/lib/chat/image.server";
 import { loadChatContext, maybeUpdateMemory } from "@/lib/chat/memory";
-import { freeDailyLimit, getOrCreateRoomId } from "@/lib/chat/server";
+import { getOrCreateRoomId } from "@/lib/chat/server";
 import { MESSAGE_COLUMNS, type ChatApiResponse, type ChatMessage } from "@/lib/chat/types";
 import { geminiModel } from "@/lib/gemini/client";
 import { generateReply } from "@/lib/gemini/reply";
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
   if (!body || !character) return json({ ok: false, error: "INVALID_REQUEST" }, 400);
   const { content } = body;
 
-  // 사진은 한도 차감 전에 검증·WebP 변환 (잘못된 파일로 횟수가 줄지 않게)
+  // 사진은 Gemini 호출 전에 검증·WebP 변환
   let image: NormalizedImage | null = null;
   if (body.image) {
     if (body.image.size > MAX_IMAGE_BYTES) return json({ ok: false, error: "INVALID_IMAGE" }, 413);
@@ -74,22 +76,22 @@ export async function POST(request: Request) {
   // 비활성 캐릭터 + 기존 대화방 없음
   if (roomId == null) return json({ ok: false, error: "INVALID_REQUEST" }, 400);
 
-  // 2. 일일 사용량 (확인 + 증가를 DB에서 원자적으로). 구독은 아직 없음 → 모두 무료 한도
-  const limit = freeDailyLimit();
-  const { data: used, error: quotaError } = await admin.rpc("consume_reply_quota", {
-    p_user_id: user.id,
-    p_limit: limit,
-  });
-  if (quotaError) {
-    console.error("[chat] consume_reply_quota failed", quotaError);
+  // 2. 루비 잔액 확인 (무료 + 유료 1루비 이상). 실제 차감은 토큰 수를 아는 답변 성공 후 (lib/billing)
+  //    잔액 1루비로 동시에 여러 번 보내면 모두 통과할 수 있음 → 차감은 0에서 멈추고 차액은 감수
+  let wallet: RubyWallet;
+  try {
+    wallet = await getWallet(admin, user.id);
+  } catch (e) {
+    console.error("[chat] get_ruby_wallet failed", e);
     return json({ ok: false, error: "SERVER_ERROR" }, 500);
   }
-  if (used == null) {
-    captureServerEvent(user.id, "chat_limit_reached", { character_id: character.id, limit });
-    return json({ ok: false, error: "LIMIT_REACHED", usage: { used: limit, limit } }, 429);
+  if (!canSpend(wallet)) {
+    captureServerEvent(user.id, "chat_rubies_insufficient", {
+      character_id: character.id,
+      paid_balance: wallet.paid,
+    });
+    return json({ ok: false, error: "INSUFFICIENT_RUBY", wallet }, 402);
   }
-  const usage = { used, limit };
-  const refund = () => admin.rpc("refund_reply_quota", { p_user_id: user.id });
 
   // 3. 캐릭터 프롬프트 + 장기 기억(요약) + 최근 대화 원문으로 Gemini 호출
   let context: Awaited<ReturnType<typeof loadChatContext>>;
@@ -97,7 +99,6 @@ export async function POST(request: Request) {
     context = await loadChatContext(roomId);
   } catch (e) {
     console.error("[chat] loadChatContext failed", e);
-    await refund();
     return json({ ok: false, error: "SERVER_ERROR" }, 500);
   }
 
@@ -112,35 +113,41 @@ export async function POST(request: Request) {
     userImage: image?.data,
   });
 
-  const logCall = (status: string, extra: Record<string, unknown> = {}) =>
-    admin
+  const model = geminiModel();
+  /** llm_calls 기록. 반환: 행 id (실패 시 null → 과금은 llm_calls 연결 없이 진행) */
+  const logCall = async (status: string, extra: Record<string, unknown> = {}) => {
+    const { data, error } = await admin
       .from("llm_calls")
       .insert({
         user_id: user.id,
         room_id: roomId,
         turn_id: turnId,
         purpose: "REPLY",
-        model: geminiModel(),
+        model,
         character_id: character.id,
         persona_version: character.personaVersion,
         latency_ms: Date.now() - startedAt,
         status,
         ...extra,
       })
-      .then(({ error }) => error && console.error("[chat] llm_calls insert failed", error));
+      .select("id")
+      .single();
+    if (error) console.error("[chat] llm_calls insert failed", error);
+    return data?.id ?? null;
+  };
 
+  // 실패·차단된 답변은 과금하지 않음 (사용자에게 답이 안 갔으므로)
   if (reply.status !== "SUCCESS") {
-    await Promise.all([refund(), logCall(reply.status, { error_code: reply.errorCode })]);
+    await logCall(reply.status, { error_code: reply.errorCode });
     captureServerEvent(user.id, "chat_reply_failed", {
       character_id: character.id,
       status: reply.status,
       error_code: reply.errorCode,
       has_image: image != null,
     });
-    const usageAfterRefund = { used: used - 1, limit };
     return reply.status === "BLOCKED"
-      ? json({ ok: false, error: "BLOCKED", usage: usageAfterRefund }, 422)
-      : json({ ok: false, error: "LLM_FAILED", usage: usageAfterRefund }, 502);
+      ? json({ ok: false, error: "BLOCKED", wallet }, 422)
+      : json({ ok: false, error: "LLM_FAILED", wallet }, 502);
   }
 
   // 4. 사진 R2 업로드 (답변 성공 후에만 → 실패한 요청의 사진이 남지 않음)
@@ -150,8 +157,8 @@ export async function POST(request: Request) {
       imagePath = await putChatImage(user.id, image.data);
     } catch (e) {
       console.error("[chat] R2 upload failed", e);
-      await Promise.all([refund(), logCall("SUCCESS", { error_code: "IMAGE_UPLOAD_FAILED" })]);
-      return json({ ok: false, error: "SERVER_ERROR", usage: { used: used - 1, limit } }, 500);
+      await logCall("SUCCESS", { error_code: "IMAGE_UPLOAD_FAILED" });
+      return json({ ok: false, error: "SERVER_ERROR", wallet }, 500);
     }
   }
 
@@ -179,7 +186,7 @@ export async function POST(request: Request) {
     .select(MESSAGE_COLUMNS)
     .order("id");
 
-  await logCall("SUCCESS", {
+  const llmCallId = await logCall("SUCCESS", {
     input_tokens: reply.usage.input,
     cached_input_tokens: reply.usage.cachedInput,
     output_tokens: reply.usage.output,
@@ -188,12 +195,20 @@ export async function POST(request: Request) {
 
   if (saveError) {
     console.error("[chat] messages insert failed", saveError);
-    await Promise.all([
-      refund(),
-      imagePath &&
-        deleteChatImage(imagePath).catch((e) => console.error("[chat] R2 cleanup failed", e)),
-    ]);
-    return json({ ok: false, error: "SERVER_ERROR", usage: { used: used - 1, limit } }, 500);
+    if (imagePath) {
+      await deleteChatImage(imagePath).catch((e) => console.error("[chat] R2 cleanup failed", e));
+    }
+    return json({ ok: false, error: "SERVER_ERROR", wallet }, 500);
+  }
+
+  // 답변이 저장된 뒤에만 과금. 실패해도 답변은 그대로 보냄 (llm_calls에 토큰이 남아 있어 추적 가능)
+  let rubiesCharged = 0;
+  try {
+    const charged = await chargeUsage(admin, { userId: user.id, usage: reply.usage, model, llmCallId });
+    rubiesCharged = charged.charged;
+    wallet = charged.wallet;
+  } catch (e) {
+    console.error("[chat] charge_ruby_usage failed", e);
   }
 
   // 6. 응답을 보낸 뒤 장기 기억 갱신 (조건이 안 되면 DB 조회 2번만 하고 끝)
@@ -217,9 +232,11 @@ export async function POST(request: Request) {
     latency_ms: Date.now() - startedAt,
     input_tokens: reply.usage.input,
     output_tokens: reply.usage.output,
-    used,
-    limit,
+    thought_tokens: reply.usage.thoughts,
+    rubies_charged: rubiesCharged,
+    free_balance: wallet.free,
+    paid_balance: wallet.paid,
   });
 
-  return json({ ok: true, messages: saved as ChatMessage[], usage }, 200);
+  return json({ ok: true, messages: saved as ChatMessage[], wallet }, 200);
 }

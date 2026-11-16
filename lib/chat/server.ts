@@ -2,18 +2,6 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
-import type { DailyUsage } from "./types";
-
-export function freeDailyLimit() {
-  const n = Number(process.env.FREE_DAILY_REPLY_LIMIT);
-  return Number.isInteger(n) && n > 0 ? n : 10;
-}
-
-/** 사용량 집계 기준일 (DB 함수와 동일하게 KST) */
-export function todayKst() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
-}
-
 /**
  * 사용자 × 캐릭터 채팅방 id. 없으면 만든다 (chat_rooms 쓰기는 서버 전용).
  * 비활성 캐릭터는 새 방을 만들지 않고, 기존 방이 없으면 null.
@@ -48,14 +36,4 @@ export async function getOrCreateRoomId(
   });
   if (error) throw error;
   return data;
-}
-
-export async function getDailyUsage(userId: string): Promise<DailyUsage> {
-  const { data } = await createAdminClient()
-    .from("usage_counters")
-    .select("reply_count")
-    .eq("user_id", userId)
-    .eq("usage_date", todayKst())
-    .maybeSingle();
-  return { used: data?.reply_count ?? 0, limit: freeDailyLimit() };
 }

@@ -10,27 +10,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// TODO: 결제 기능 추가 시 "Subscribe" 버튼 → /pricing
+// 루비 부족 (POST /api/chat → INSUFFICIENT_RUBY)
+// TODO: 결제 기능 추가 시 "Get rubies" 버튼 → /shop
 export function LimitDialog({
   open,
   onOpenChange,
-  limit,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  limit: number;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-4 p-6 sm:max-w-sm" showCloseButton={false}>
         <DialogHeader className="items-center text-center">
-          <DialogTitle className="text-lg font-semibold">You&apos;ve hit today&apos;s limit</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">You&apos;re out of rubies</DialogTitle>
           <DialogDescription className="leading-relaxed">
-            Free accounts can get up to {limit} replies a day.
+            Your free rubies refill at midnight (Korea time).
             <br />
-            Your limit resets at midnight (Korea time).
-            <br />
-            Subscriptions with more messages are coming soon!
+            Ruby packs are coming soon!
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mx-0 mb-0 border-0 bg-transparent p-0">

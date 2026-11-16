@@ -1,11 +1,12 @@
 "use client";
 
-import { ChevronLeft, Info, Loader2 } from "lucide-react";
+import { ChevronLeft, Gem, Info, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import type { RubyWallet } from "@/lib/billing/pricing";
 import { MESSAGE_PAGE_SIZE } from "@/lib/chat/constants";
 import { parseMessageContent } from "@/lib/chat/content";
 import { prepareImage, type PreparedImage } from "@/lib/chat/image.client";
@@ -14,7 +15,6 @@ import {
   type ChatApiResponse,
   type ChatCharacter,
   type ChatMessage,
-  type DailyUsage,
 } from "@/lib/chat/types";
 import { createClient } from "@/lib/supabase/client";
 
@@ -47,13 +47,13 @@ export function ChatRoom({
   character,
   initialMessages,
   initialHasMore,
-  initialUsage,
+  initialWallet,
 }: {
   roomId: number;
   character: ChatCharacter;
   initialMessages: ChatMessage[];
   initialHasMore: boolean;
-  initialUsage: DailyUsage;
+  initialWallet: RubyWallet;
 }) {
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
@@ -61,7 +61,7 @@ export function ChatRoom({
   const [loadingOlder, setLoadingOlder] = useState(false);
   // ?쒕쾭???꾩쭅 ??λ릺吏 ?딆?(?꾩넚 以뫢룹떎?? ??硫붿떆吏
   const [outbox, setOutbox] = useState<OutboxItem[]>([]);
-  const [usage, setUsage] = useState(initialUsage);
+  const [wallet, setWallet] = useState(initialWallet);
   const [limitOpen, setLimitOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [attachment, setAttachment] = useState<PreparedImage | null>(null);
@@ -76,7 +76,7 @@ export function ChatRoom({
   const prependAnchor = useRef<{ height: number; top: number } | null>(null);
 
   const sending = outbox.some((m) => m.status === "sending");
-  const remaining = Math.max(usage.limit - usage.used, 0);
+  const rubies = wallet.free + wallet.paid;
 
   // ?ㅽ겕濡??꾩튂: ?댁쟾 硫붿떆吏 濡쒕뱶 ???꾩튂 ?좎? / 洹???泥?吏꾩엯, ??硫붿떆吏) ??留??꾨옒
   useLayoutEffect(() => {
@@ -182,15 +182,15 @@ export function ChatRoom({
           ? { messageId: reply.id, parts, step: 0, chars: 0 }
           : null,
       );
-      setUsage(body.usage);
+      setWallet(body.wallet);
       // ?쇱そ ???紐⑸줉??留덉?留?硫붿떆吏쨌?쒓컖 媛깆떊
       router.refresh();
       return;
     }
 
-    if (body?.usage) setUsage(body.usage);
+    if (body?.wallet) setWallet(body.wallet);
     switch (body?.error) {
-      case "LIMIT_REACHED":
+      case "INSUFFICIENT_RUBY":
         // ?꾩넚?섏? ?딆? ?댁슜? ?낅젰李쎌쑝濡??섎룎由?
         setOutbox((prev) => prev.filter((m) => m.localId !== localId));
         setDraft((d) => d || content);
@@ -250,7 +250,7 @@ export function ChatRoom({
     const content = draft.trim();
     const image = attachment ?? undefined;
     if ((!content && !image) || sending || imageState === "preparing") return;
-    if (remaining <= 0) {
+    if (rubies < 1) {
       setLimitOpen(true);
       return;
     }
@@ -310,10 +310,12 @@ export function ChatRoom({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span
-            className="rounded-full bg-coral-soft px-2.5 py-1.5 text-[11px] font-bold text-coral"
-            title="Free replies left today"
+            className="inline-flex items-center gap-1 rounded-full bg-coral-soft px-2.5 py-1.5 text-[11px] font-bold text-coral"
+            title={`Free today: ${wallet.free} · Purchased: ${wallet.paid}`}
+            aria-label={`${rubies} rubies (free today ${wallet.free}, purchased ${wallet.paid})`}
           >
-            {remaining} / {usage.limit} left today
+            <Gem className="size-3.5" aria-hidden />
+            {rubies}
           </span>
           <Link
             href={`/characters/${character.id}`}
@@ -365,7 +367,7 @@ export function ChatRoom({
         onRemoveImage={removeImage}
       />
 
-      <LimitDialog open={limitOpen} onOpenChange={setLimitOpen} limit={usage.limit} />
+      <LimitDialog open={limitOpen} onOpenChange={setLimitOpen} />
     </div>
   );
 }
