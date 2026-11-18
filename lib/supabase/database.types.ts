@@ -500,32 +500,6 @@ export type Database = {
           },
         ]
       }
-      usage_counters: {
-        Row: {
-          reply_count: number
-          usage_date: string
-          user_id: string
-        }
-        Insert: {
-          reply_count?: number
-          usage_date: string
-          user_id: string
-        }
-        Update: {
-          reply_count?: number
-          usage_date?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "usage_counters_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -572,10 +546,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      consume_reply_quota: {
-        Args: { p_limit: number; p_user_id: string }
-        Returns: number
-      }
       create_chat_room: {
         Args: { p_character_id: string; p_user_id: string }
         Returns: number
@@ -597,7 +567,6 @@ export type Database = {
           pending_points: number
         }[]
       }
-      refund_reply_quota: { Args: { p_user_id: string }; Returns: undefined }
       refund_rubies: {
         Args: { p_amount: number; p_order_id: string; p_user_id: string }
         Returns: number

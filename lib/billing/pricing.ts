@@ -12,6 +12,20 @@ export const WON_PER_RUBY = 100;
 export const RUBY_PACKS = [50, 100, 150] as const;
 export type RubyPack = (typeof RUBY_PACKS)[number];
 
+/** 상점 표시용 가격. 실제 결제 금액은 Polar 상품 가격 → 바꾸면 여기도 같이 수정 */
+export const RUBY_PACK_PRICES_USD: Record<RubyPack, string> = {
+  50: "$3.79",
+  100: "$7.49",
+  150: "$11.19",
+};
+
+/** 대화 1회 평균 점수 (입력 1800 + 출력 150×8). 상점의 "약 N회 대화" 안내용 추정치 */
+export const AVG_POINTS_PER_CHAT = 3000;
+
+export function estimatedChats(rubies: number) {
+  return Math.floor((rubies * POINTS_PER_RUBY) / AVG_POINTS_PER_CHAT);
+}
+
 /** 하루 무료 루비 기본값 (env FREE_DAILY_RUBIES로 변경) */
 export const DEFAULT_FREE_DAILY_RUBIES = 10;
 

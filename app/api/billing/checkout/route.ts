@@ -40,16 +40,28 @@ export async function POST(request: NextRequest) {
   const { pack } = parsed.data;
 
   const siteUrl = request.nextUrl.origin;
-  try {
-    const checkout = await getPolar().checkouts.create({
+  const create = (customerEmail?: string) =>
+    getPolar().checkouts.create({
       products: [productIdForPack(pack)],
       external_customer_id: user.id,
-      customer_email: user.email,
+      customer_email: customerEmail,
       metadata: { user_id: user.id, pack },
       // {CHECKOUT_ID}는 Polar가 실제 체크아웃 id로 바꿔준다
       success_url: `${siteUrl}/billing/success?checkout_id={CHECKOUT_ID}`,
       return_url: `${siteUrl}/chats`,
     });
+
+  try {
+    let checkout;
+    try {
+      checkout = await create(user.email);
+    } catch (e) {
+      // Polar는 도메인이 실제로 없는 이메일을 거부한다 (예: 로컬 데모 계정).
+      // 이메일은 결제 화면 미리 채우기용일 뿐이라 빼고 한 번 더 시도
+      if (!user.email) throw e;
+      console.warn("[billing/checkout] retrying without customer_email", e);
+      checkout = await create();
+    }
     captureServerEvent(user.id, "checkout_started", { pack });
     return json({ ok: true, url: checkout.url }, 200);
   } catch (e) {

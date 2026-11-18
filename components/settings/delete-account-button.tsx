@@ -51,8 +51,9 @@ export function DeleteAccountButton() {
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">Delete your account?</DialogTitle>
             <DialogDescription className="leading-relaxed">
-              Your profile, all conversations, and inquiries will be permanently deleted. This
-              can&apos;t be undone.
+              Your profile, all conversations, and inquiries will be permanently deleted. Any
+              rubies you have left, including purchased rubies, will be lost. This can&apos;t be
+              undone.
             </DialogDescription>
           </DialogHeader>
           {error && (

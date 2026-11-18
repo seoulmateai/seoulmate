@@ -6,11 +6,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 // 회원 탈퇴
-//  1. (TODO: 결제 추가 시) Stripe 구독 취소
-//  2. 신고 메모 비우기 (reports는 통계용으로 남고 user_id만 NULL이 됨)
-//  3. 채팅 이미지(R2) 삭제
-//  4. auth 사용자 삭제 → profiles → chat_rooms → messages, inquiries, usage_counters cascade 삭제
-//     llm_calls / reports 는 user_id가 NULL로 남음
+//  1. 신고 메모 비우기 (reports는 통계용으로 남고 user_id만 NULL이 됨)
+//  2. 채팅 이미지(R2) 삭제
+//  3. auth 사용자 삭제 → profiles → chat_rooms → messages, inquiries, ruby_wallets cascade 삭제
+//     (남은 루비는 소멸. 결제는 1회성 루비 충전이라 취소할 구독 없음)
+//     llm_calls / reports / ruby_transactions 는 user_id가 NULL로 남음
 //  5. PostHog account_deleted 기록. 클라이언트 posthog.reset()은 signOut 시 AuthProvider가 처리
 export async function POST(request: NextRequest) {
   // 다른 사이트에서 보낸 요청 차단

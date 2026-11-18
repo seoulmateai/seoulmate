@@ -27,6 +27,16 @@ export function productIdForPack(pack: RubyPack) {
   return id;
 }
 
+/** 체크아웃 id → 그 결제로 만들어진 주문 id (이 사용자의 주문일 때만). 아직 없으면 null */
+export async function findOrderIdForCheckout(checkoutId: string, userId: string) {
+  const { items } = await getPolar().orders.list({
+    checkout_id: checkoutId,
+    external_customer_id: userId,
+    limit: 1,
+  });
+  return items[0]?.id ?? null;
+}
+
 /** Polar 상품 ID → 루비 수. 모르는 상품이면 null */
 export function rubiesForProduct(productId: string | null | undefined): number | null {
   if (!productId) return null;

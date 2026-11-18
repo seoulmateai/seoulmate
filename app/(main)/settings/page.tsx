@@ -3,10 +3,14 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { RubyHistory } from "@/components/billing/ruby-history";
+import { WalletSummary } from "@/components/billing/wallet-summary";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { DeleteAccountButton } from "@/components/settings/delete-account-button";
 import { NicknameEditor } from "@/components/settings/nickname-editor";
 import { requireOnboardedUser } from "@/lib/auth/session";
+import { freeDailyRubies, getWallet } from "@/lib/billing/wallet";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const LINKS = [
   {
@@ -43,6 +47,12 @@ export default function SettingsPage() {
         fallback={<div className="mb-5.5 h-[116px] animate-pulse rounded-[20px] bg-coral-soft md:mb-7.5 md:h-[128px]" />}
       >
         <ProfileCard />
+      </Suspense>
+
+      <Suspense
+        fallback={<div className="mb-5.5 h-[300px] animate-pulse rounded-[18px] bg-coral-soft md:mb-7.5" />}
+      >
+        <RubySection />
       </Suspense>
 
       <div className="grid items-start gap-4 min-[850px]:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.75fr)] min-[850px]:gap-6.5">
@@ -83,6 +93,26 @@ export default function SettingsPage() {
       </div>
 
       <SiteFooter className="mt-12 md:mt-16" />
+    </div>
+  );
+}
+
+async function RubySection() {
+  const { supabase, user } = await requireOnboardedUser("/settings");
+  // 잔액은 오늘 무료 루비 계산이 필요해서 DB 함수(service role), 내역은 RLS로 본인 것만
+  const [wallet, { data: transactions }] = await Promise.all([
+    getWallet(createAdminClient(), user.id),
+    supabase
+      .from("ruby_transactions")
+      .select("id, type, paid_delta, free_delta, created_at")
+      .order("id", { ascending: false })
+      .limit(10),
+  ]);
+
+  return (
+    <div className="mb-5.5 grid items-start gap-4 md:mb-7.5 min-[850px]:grid-cols-[minmax(280px,0.75fr)_minmax(0,1.45fr)] min-[850px]:gap-6.5">
+      <WalletSummary wallet={wallet} freeDaily={freeDailyRubies()} />
+      <RubyHistory transactions={transactions ?? []} />
     </div>
   );
 }

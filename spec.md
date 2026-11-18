@@ -5,7 +5,7 @@
 - 카톡 느낌의 1:1 채팅
 - LLM은 Gemini API 사용, 파인튜닝은 하지 않음, 스트리밍 없이 한 번에 응답
 - 캐릭터 프롬프트(성격·말투 등)는 DB가 아니라 코드로 관리
-- 구독형 결제
+- 루비(가상 재화) 충전 후 사용량만큼 차감하는 결제 (구독 아님)
 - 가입할 때 연령 확인
 - 회원 탈퇴 시 채팅 메시지 삭제
 
@@ -15,21 +15,23 @@
 | 프론트/호스팅 | Vercel |
 | 백엔드(DB·Auth) | Supabase |
 | 로그인 | Google OAuth, 이메일 |
-| 결제 | 나중에 |
+| 결제 | Polar (Merchant of Record) |
 | 유저 분석 | PostHog |
 
 ---
 
-## ⚠️ Stripe 계정 국가 이슈
-Stripe에서 한국 결제수단(국내 카드, 카카오페이, 네이버페이 등)을 받을 수 있는 사업자 국가 목록에 **한국(KR)은 없어요**. 다른 나라에 계정을 열려면 그 나라의 법인, 세금 ID, 주소, 은행 계좌가 필요해요.
+## 결제: Polar + 루비
+Stripe는 한국(KR) 사업자 계정을 열 수 없어서, Merchant of Record(판매 대행·세금 처리)인 **Polar**를 써요. Polar는 한국으로 정산(Stripe Connect Express)할 수 있어요.
 
-- MVP는 **Stripe 테스트 모드**로 구현해요.
-- 실제 운영할 때는 **토스페이먼츠 / 포트원(PortOne)**으로 교체하는 걸 검토해요.
-- 나중에 교체하기 쉽도록 결제 로직은 `lib/billing/`에 모아둬요.
+- **루비:** 1루비 = 5,000점 = 약 100원. 점수 = 입력토큰 × 1 + (출력 + thinking 토큰) × 8 (모델별 가중치는 `lib/billing/pricing.ts`)
+- 답변·장기기억 요약 LLM 호출마다 점수를 쌓고 5,000점마다 1루비 차감 (DB 함수 `charge_ruby_usage`)
+- **무료:** 하루 10루비 (KST 자정에 다시 채워짐, 이월 없음, `FREE_DAILY_RUBIES`). 무료 → 충전 루비 순으로 차감
+- **상품:** 1회 결제 50 / 100 / 150루비 ($3.79 / $7.49 / $11.19, 세금 포함 USD)
+- 결제 로직은 `lib/billing/`에 모아둬요. 수수료: 5% + 50¢ (해외 카드 +1.5%), 환불해도 수수료는 돌려받지 못함
 
 참고 문서
-- https://docs.stripe.com/payments/kr-card
-- https://support.stripe.com/questions/requirements-to-open-a-stripe-account-in-another-country
+- https://polar.sh/docs/merchant-of-record/supported-countries
+- https://polar.sh/docs/merchant-of-record/fees
 
 ---
 
@@ -42,12 +44,12 @@ Stripe에서 한국 결제수단(국내 카드, 카카오페이, 네이버페이
 | 폼/검증 | | `react-hook-form`, `zod` |
 | DB/인증 | Supabase (Postgres + Auth + RLS) | `@supabase/supabase-js`, `@supabase/ssr` |
 | LLM | Gemini, 서버에서만 호출 | `@google/genai` |
-| 결제 | Stripe Checkout + Customer Portal + Webhook | `stripe` (`@stripe/stripe-js`는 선택) |
+| 결제 | Polar Checkout + Webhook | `@polar-sh/sdk`, `@polar-sh/nextjs` |
 | 분석 | PostHog | `posthog-js`, `posthog-node` |
 | 날짜 | | `date-fns` |
 
 ### 구조 원칙
-- Gemini와 Stripe 시크릿 키, Supabase service role 키는 서버(Route Handler / Server Action)에서만 써요.
+- Gemini와 Polar 액세스 토큰·webhook secret, Supabase service role 키는 서버(Route Handler / Server Action)에서만 써요.
 - 클라이언트는 Supabase anon key를 쓰고, RLS로 본인 데이터만 접근해요.
 - 캐릭터는 Supabase `characters` 테이블에 두고 대시보드에서 수정해요. 이미지는 Cloudflare R2(`characters/{id}/파일명`). 조회는 `lib/characters`(공유 캐시 `use cache`), 수정 시 Webhook → `/api/revalidate/characters`로 캐시 무효화
 
@@ -95,42 +97,37 @@ Stripe에서 한국 결제수단(국내 카드, 카카오페이, 네이버페이
 - 말풍선 UI: 내 메시지는 오른쪽, 캐릭터는 왼쪽 + 프사, 시간 표시
 - 전송하면 응답이 올 때까지 "입력 중…" 표시 (스트리밍 없음)
 - 이전 대화 불러오기: 위로 스크롤하면 더 로드
-- 무료 사용자에게 일일 한도를 표시하고, 한도를 넘으면 구독 유도 모달
+- 상단에 루비 잔액 표시(누르면 상점). 루비가 없으면 충전 유도 모달
 - 에러 시 "다시 보내기"
 - **API `POST /api/chat`**
   1. 세션 확인
-  2. 구독 상태 또는 일일 사용량 확인
+  2. 루비 잔액(무료 + 충전) 1개 이상인지 확인
   3. 캐릭터 systemPrompt와 최근 N개 메시지로 Gemini `generateContent` 호출
-  4. user/assistant 메시지 저장, `conversations.last_message` 갱신, 응답 반환
+  4. user/assistant 메시지 저장, 토큰 사용량만큼 루비 과금(실패·차단 답변은 과금 안 함), 응답 반환
 - **도구:** `@google/genai` (`systemInstruction`, `safetySettings`)
-- **이벤트:** `message_sent` (character_id), `limit_reached`
+- **이벤트:** `chat_message_sent` (character_id, rubies_charged), `chat_rubies_insufficient`
 - **주의:** Gemini는 노골적인 성적 콘텐츠를 정책상 차단해요. 캐릭터 프롬프트는 그 범위 안에서 설계해야 해요.
 
-### 7. 요금제 / 결제 `/pricing`, `/billing/success`, `/billing/cancel`
-**일단은 이부분은 제외하고 구성한다 나중에 추가할거임"
-- 무료와 구독 비교 (예: 무료는 하루 N회, 구독은 높은 한도)
-- "구독하기"를 누르면 `POST /api/stripe/checkout` 호출 후 Stripe Checkout(`mode: 'subscription'`)으로 이동
-- 성공 페이지는 "처리 중"만 보여주고, 실제 구독 상태는 webhook 기준으로 반영
-- **Webhook `POST /api/stripe/webhook`**
-  - `checkout.session.completed`
-  - `customer.subscription.updated`
-  - `customer.subscription.deleted`
-  - `invoice.payment_failed`
-  - 위 이벤트를 받으면 `subscriptions` 테이블을 갱신
-- **이벤트:** `pricing_viewed`, `checkout_started`, `subscribed` (서버에서 `posthog-node`로 전송)
+### 7. 루비 상점 / 결제 `/shop`, `/billing/success`
+- 루비 팩 3개(50 / 100 / 150)와 현재 잔액. 가격은 USD, 결제는 Polar
+- "구매"를 누르면 `POST /api/billing/checkout` → Polar 체크아웃으로 이동 (서버가 세션의 user.id를 `external_customer_id`·metadata에 넣음)
+- 성공 페이지는 이 결제의 주문이 반영될 때까지 "처리 중"을 보여주고, 반영되면 "N rubies added"
+- **Webhook `POST /api/billing/webhook`** (Polar API 버전 2026-10, 서명 검증)
+  - `order.paid` → `credit_rubies` (같은 주문은 한 번만)
+  - `order.refunded` → 환불 비율만큼 `refund_rubies` (세금 제외 금액끼리 비율 계산)
+- **이벤트:** `checkout_started`, `rubies_purchased`, `rubies_refunded` (서버에서 `posthog-node`로 전송)
 
 ### 8. 마이페이지 / 설정 `/settings`
 - 닉네임 수정
-- 구독 상태 표시. "구독 관리"를 누르면 Stripe Customer Portal(해지·카드 변경)로 이동
+- 루비 잔액(오늘 무료 / 충전)과 최근 충전·사용 내역, 상점 바로가기
 - 이용약관, 개인정보 처리방침 (일단 버튼만 만들어놓기)
 - 문의하기
 - 로그아웃
 - **회원 탈퇴 `POST /api/account/delete`**
-  1. Stripe 구독 취소
-  2. 메시지·대화 삭제 (cascade)
-  3. `supabase.auth.admin.deleteUser`로 계정 삭제 (service role, 서버 전용)
-  4. PostHog `reset()`
-- **이벤트:** `subscription_portal_opened`, `account_deleted`
+  1. 메시지·대화·루비 지갑 삭제 (cascade, 남은 루비는 소멸)
+  2. `supabase.auth.admin.deleteUser`로 계정 삭제 (service role, 서버 전용)
+  3. PostHog `reset()`
+- **이벤트:** `account_deleted`
 
 
 ---

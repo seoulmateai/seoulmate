@@ -309,14 +309,15 @@ export function ChatRoom({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span
-            className="inline-flex items-center gap-1 rounded-full bg-coral-soft px-2.5 py-1.5 text-[11px] font-bold text-coral"
+          <Link
+            href="/shop"
+            className="inline-flex items-center gap-1 rounded-full bg-coral-soft px-2.5 py-1.5 text-[11px] font-bold text-coral hover:bg-coral/20"
             title={`Free today: ${wallet.free} · Purchased: ${wallet.paid}`}
-            aria-label={`${rubies} rubies (free today ${wallet.free}, purchased ${wallet.paid})`}
+            aria-label={`${rubies} rubies (free today ${wallet.free}, purchased ${wallet.paid}). Get more rubies`}
           >
             <Gem className="size-3.5" aria-hidden />
             {rubies}
-          </span>
+          </Link>
           <Link
             href={`/characters/${character.id}`}
             aria-label={`${character.name}'s profile`}
