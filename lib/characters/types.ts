@@ -39,6 +39,12 @@ export type CharacterPersona = {
   personality: string;
   speechStyle: string;
   extraRules: string | null;
+  /** 호감도 상승 행동/대화 목록 (미입력이면 null) */
+  affectionTriggers: string | null;
+  /** 호감도 하락 행동/대화 목록 (미입력이면 null) */
+  affectionLoss: string | null;
+  /** episode_1 ~ episode_5 시나리오. 단계 i의 에피소드 = episodes[i - 1] */
+  episodes: (string | null)[];
   /** 프롬프트 칼럼이 바뀌면 DB 트리거가 +1. llm_calls에 기록 */
   personaVersion: number;
   isActive: boolean;

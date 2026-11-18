@@ -1,3 +1,4 @@
+import type { RelationshipView } from "@/lib/affection/stages";
 import type { RubyWallet } from "@/lib/billing/pricing";
 
 export type MessageRole = "USER" | "ASSISTANT";
@@ -31,9 +32,18 @@ export type ChatCharacter = {
   avatar: string;
 };
 
-/** POST /api/chat 응답. wallet = 답변 과금 후 루비 잔액 (요약 과금은 응답 뒤라 다음 응답에 반영) */
+/**
+ * POST /api/chat 응답. wallet = 답변 과금 후 루비 잔액 (요약 과금은 응답 뒤라 다음 응답에 반영)
+ * relationship = 이번 답장 반영 후 호감도, newlyUnlocked = 이번 답장으로 새 에피소드가 해금됨
+ */
 export type ChatApiResponse =
-  | { ok: true; messages: ChatMessage[]; wallet: RubyWallet }
+  | {
+      ok: true;
+      messages: ChatMessage[];
+      wallet: RubyWallet;
+      relationship: RelationshipView;
+      newlyUnlocked: boolean;
+    }
   | {
       ok: false;
       error:
@@ -42,6 +52,7 @@ export type ChatApiResponse =
         | "INVALID_REQUEST"
         | "INVALID_IMAGE"
         | "INSUFFICIENT_RUBY"
+        | "EPISODE_UNAVAILABLE"
         | "BLOCKED"
         | "LLM_FAILED"
         | "SERVER_ERROR";
