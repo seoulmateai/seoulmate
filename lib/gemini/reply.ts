@@ -184,7 +184,7 @@ function buildSystemInstruction(
 Reply as JSON: {"parts": [{"kind": "NARRATION" | "DIALOGUE", "text": "..."}]}
 - NARRATION: prose describing your character's actions, expressions, inner reactions, the surroundings, and the situation. Third person, present tense, referring to your character by name or pronoun.
 - DIALOGUE: exactly what your character says out loud. Each DIALOGUE part is shown as one chat bubble. No quotation marks and no asterisks.
-- Use at most ${MAX_PARTS_PER_KIND} NARRATION parts and ${MAX_PARTS_PER_KIND} DIALOGUE parts per reply, usually narration first. Aim for about ${TARGET_REPLY_CHARS} characters in total.
+- Use at most ${MAX_PARTS_PER_KIND} NARRATION parts and ${MAX_PARTS_PER_KIND} DIALOGUE parts per reply. Prefer alternating them, usually starting with narration (narration, dialogue, narration, dialogue), so actions and spoken lines interweave naturally. Aim for about ${TARGET_REPLY_CHARS} characters in total.
 - Describe only your character and the world. Never write the user's actions, words, thoughts, or feelings, and never decide what the user does.
 - Write in the same language as the user's latest message, even if earlier messages were in a different language.
 - In earlier messages, paragraphs wrapped in *asterisks* are narration (actions and situation) and the rest is spoken dialogue. The user may describe their own actions the same way.
