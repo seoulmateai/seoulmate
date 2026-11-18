@@ -32,6 +32,8 @@ const TIMEOUT_MS = 25_000;
 const MAX_PARTS_PER_KIND = 2;
 /** 프롬프트로 요청하는 답장 길이 (묘사+대사 합계) */
 const TARGET_REPLY_CHARS = 1000;
+/** 에피소드를 시작하는 답장 길이 (이전 장면 마무리 + 전환 + 구체적인 장면 묘사라 더 길게) */
+const EPISODE_REPLY_CHARS = 1600;
 /** 단락 1개 상한. 저장 형식 전체는 messages.content CHECK(4000자) 안에 들어가야 함 */
 const MAX_PART_CHARS = 1900;
 const MAX_CONTENT_CHARS = 4000;
@@ -292,9 +294,13 @@ Your relationship with ${nickname} has just reached a new stage, and a special e
 ${scenario}
 
 ## How to play it
-- Begin the episode now, flowing naturally from the recent conversation and memory. Bridge from where the story currently is into the scenario's situation; don't jump abruptly or contradict what already happened.
-- Follow the scenario, but keep your character's Personality, Speech style, and the current relationship stage.
-- Play out the scenario's key moment in this reply, then end at a point where ${nickname} can respond.
+1. Close the current scene first. Look at the recent conversation and wrap up whatever is still going on (an unfinished topic, an activity, a place you are in) in a way that fits what actually happened, so nothing is left hanging. Do this briefly and naturally; don't summarize the whole conversation.
+2. Then transition clearly into the episode. Make the passage of time or the change of place explicit (later that evening, a few days later, the next weekend, on the way home...), and connect it to what came before where it makes sense.
+3. Set the episode's scene in concrete, vivid detail: where and when it is, the surroundings and atmosphere (light, sound, weather, smells), what is happening and why, and your character's appearance, actions, and expression in that moment. ${nickname} should be able to picture the situation clearly.
+4. Then play out the scenario's key moment through your character's actions and words, and end at a point where ${nickname} can naturally respond. Don't resolve the whole episode in this reply.
+- A good shape: NARRATION (close the current scene and transition), DIALOGUE (a line that bridges into the new situation), NARRATION (the detailed episode scene), DIALOGUE (your character's line inviting ${nickname} in).
+- For this reply only, you may write up to about ${EPISODE_REPLY_CHARS} characters in total.
+- Follow the scenario, but keep your character's Personality, Speech style, and the current relationship stage. Don't contradict anything that already happened in the story.
 - The last user message "${EPISODE_CUE}" is only a cue to continue; ${nickname} did not say it. Set "affection_delta" to 0.
 - Write in the language ${nickname} has been using in the conversation.
 `;
