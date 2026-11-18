@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { RoomAffection } from "@/lib/affection/stages";
 import { chargeUsage } from "@/lib/billing/wallet";
 import type { CharacterPersona } from "@/lib/characters";
 import { geminiModel } from "@/lib/gemini/client";
@@ -74,15 +75,15 @@ async function fetchRecentTurns(
   return turns.slice(-maxTurns);
 }
 
-/** 답변 생성에 넣을 장기 기억 + 최근 대화 원문 (오래된 순) */
+/** 답변 생성에 넣을 장기 기억 + 최근 대화 원문 (오래된 순) + 호감도 상태 */
 export async function loadChatContext(
   roomId: number,
-): Promise<{ memory: string | null; history: HistoryMessage[] }> {
+): Promise<{ memory: string | null; history: HistoryMessage[]; room: RoomAffection }> {
   const admin = createAdminClient();
   const [{ data: room, error }, turns] = await Promise.all([
     admin
       .from("chat_rooms")
-      .select("memory_summary, summarized_until_message_id")
+      .select("memory_summary, summarized_until_message_id, affection, unlocked_stage, played_stage")
       .eq("id", roomId)
       .single(),
     fetchRecentTurns(admin, roomId, null, MAX_RAW_TURNS),
@@ -97,6 +98,11 @@ export async function loadChatContext(
   return {
     memory: room.memory_summary,
     history: turns.slice(-rawTurns).flatMap((t) => t.messages),
+    room: {
+      affection: room.affection,
+      unlockedStage: room.unlocked_stage,
+      playedStage: room.played_stage,
+    },
   };
 }
 

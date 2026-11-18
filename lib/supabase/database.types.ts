@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       characters: {
         Row: {
+          affection_loss: string | null
+          affection_triggers: string | null
           age: number
           appearance: string | null
           avatar_path: string
@@ -24,6 +26,11 @@ export type Database = {
           bio: string
           blur_data_url: string | null
           created_at: string
+          episode_1: string | null
+          episode_2: string | null
+          episode_3: string | null
+          episode_4: string | null
+          episode_5: string | null
           extra_rules: string | null
           first_meeting: string | null
           id: string
@@ -40,6 +47,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          affection_loss?: string | null
+          affection_triggers?: string | null
           age: number
           appearance?: string | null
           avatar_path: string
@@ -48,6 +57,11 @@ export type Database = {
           bio: string
           blur_data_url?: string | null
           created_at?: string
+          episode_1?: string | null
+          episode_2?: string | null
+          episode_3?: string | null
+          episode_4?: string | null
+          episode_5?: string | null
           extra_rules?: string | null
           first_meeting?: string | null
           id?: string
@@ -64,6 +78,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          affection_loss?: string | null
+          affection_triggers?: string | null
           age?: number
           appearance?: string | null
           avatar_path?: string
@@ -72,6 +88,11 @@ export type Database = {
           bio?: string
           blur_data_url?: string | null
           created_at?: string
+          episode_1?: string | null
+          episode_2?: string | null
+          episode_3?: string | null
+          episode_4?: string | null
+          episode_5?: string | null
           extra_rules?: string | null
           first_meeting?: string | null
           id?: string
@@ -91,6 +112,7 @@ export type Database = {
       }
       chat_rooms: {
         Row: {
+          affection: number
           character_id: string
           created_at: string
           id: number
@@ -98,11 +120,14 @@ export type Database = {
           last_message_preview: string | null
           last_read_message_id: number | null
           memory_summary: string | null
+          played_stage: number
           summarized_until_message_id: number | null
           summary_updated_at: string | null
+          unlocked_stage: number
           user_id: string
         }
         Insert: {
+          affection?: number
           character_id: string
           created_at?: string
           id?: never
@@ -110,11 +135,14 @@ export type Database = {
           last_message_preview?: string | null
           last_read_message_id?: number | null
           memory_summary?: string | null
+          played_stage?: number
           summarized_until_message_id?: number | null
           summary_updated_at?: string | null
+          unlocked_stage?: number
           user_id: string
         }
         Update: {
+          affection?: number
           character_id?: string
           created_at?: string
           id?: never
@@ -122,8 +150,10 @@ export type Database = {
           last_message_preview?: string | null
           last_read_message_id?: number | null
           memory_summary?: string | null
+          played_stage?: number
           summarized_until_message_id?: number | null
           summary_updated_at?: string | null
+          unlocked_stage?: number
           user_id?: string
         }
         Relationships: [
@@ -195,6 +225,7 @@ export type Database = {
       }
       llm_calls: {
         Row: {
+          affection_delta: number | null
           cached_input_tokens: number | null
           character_id: string | null
           created_at: string
@@ -216,6 +247,7 @@ export type Database = {
           weighted_points: number | null
         }
         Insert: {
+          affection_delta?: number | null
           cached_input_tokens?: number | null
           character_id?: string | null
           created_at?: string
@@ -237,6 +269,7 @@ export type Database = {
           weighted_points?: number | null
         }
         Update: {
+          affection_delta?: number | null
           cached_input_tokens?: number | null
           character_id?: string | null
           created_at?: string
@@ -531,6 +564,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_affection: {
+        Args: { p_delta: number; p_room_id: number }
+        Returns: {
+          affection: number
+          newly_unlocked: boolean
+          played_stage: number
+          unlocked_stage: number
+        }[]
+      }
       charge_ruby_usage: {
         Args: {
           p_free_daily: number

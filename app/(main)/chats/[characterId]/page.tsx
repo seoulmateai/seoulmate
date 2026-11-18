@@ -3,7 +3,8 @@ import { Suspense } from "react";
 
 import { ChatRoom } from "@/components/chat/chat-room";
 import { requireOnboardedUser } from "@/lib/auth/session";
-import { getCharacter, getCharacters } from "@/lib/characters";
+import { toRelationshipView } from "@/lib/affection/stages";
+import { getCharacter, getCharacterPersona, getCharacters } from "@/lib/characters";
 import { MESSAGE_PAGE_SIZE } from "@/lib/chat/constants";
 import { getWallet } from "@/lib/billing/wallet";
 import { getOrCreateRoomId } from "@/lib/chat/server";
@@ -34,7 +35,7 @@ async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">
   const roomId = await getOrCreateRoomId(user.id, character);
   if (roomId == null) notFound();
 
-  const [{ data: rows }, wallet] = await Promise.all([
+  const [{ data: rows }, wallet, { data: room }, persona] = await Promise.all([
     supabase
       .from("messages")
       .select(MESSAGE_COLUMNS)
@@ -42,8 +43,23 @@ async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">
       .order("id", { ascending: false })
       .limit(MESSAGE_PAGE_SIZE + 1),
     getWallet(createAdminClient(), user.id),
+    supabase
+      .from("chat_rooms")
+      .select("affection, unlocked_stage, played_stage")
+      .eq("id", roomId)
+      .maybeSingle(),
+    // 에피소드 시나리오 입력 여부 확인용 (공유 캐시, 서버에서만 사용 — 클라이언트로 넘기지 않음)
+    getCharacterPersona(character.id),
   ]);
   const latest = (rows ?? []) as ChatMessage[];
+  const relationship = toRelationshipView(
+    {
+      affection: room?.affection ?? 0,
+      unlockedStage: room?.unlocked_stage ?? 0,
+      playedStage: room?.played_stage ?? 0,
+    },
+    persona?.episodes ?? [],
+  );
 
   return (
     <ChatRoom
@@ -57,6 +73,7 @@ async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">
       initialMessages={latest.slice(0, MESSAGE_PAGE_SIZE).reverse()}
       initialHasMore={latest.length > MESSAGE_PAGE_SIZE}
       initialWallet={wallet}
+      initialRelationship={relationship}
     />
   );
 }

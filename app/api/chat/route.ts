@@ -1,6 +1,13 @@
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { applyAffection, claimEpisode, releaseEpisode } from "@/lib/affection/server";
+import {
+  EPISODE_COUNT,
+  nextEpisodeStage,
+  toRelationshipView,
+  type RoomAffection,
+} from "@/lib/affection/stages";
 import { canSpend, type RubyWallet } from "@/lib/billing/pricing";
 import { chargeUsage, getWallet } from "@/lib/billing/wallet";
 import { getCharacterPersona } from "@/lib/characters";
@@ -19,14 +26,19 @@ import { createClient } from "@/lib/supabase/server";
 // 답변(최대 25초) 후 after()의 장기 기억 요약(최대 20초)까지 이 시간 안에 끝나야 한다
 export const maxDuration = 60;
 
-// multipart/form-data: characterId, content, image(선택). 텍스트와 사진 중 하나는 있어야 함
+// multipart/form-data: characterId, content, image(선택), episodeStage(선택)
+// - 일반 메시지: 텍스트와 사진 중 하나는 있어야 함
+// - 에피소드 시작: episodeStage만 (사용자 메시지 없이 AI가 에피소드를 시작하는 답장 1개)
 const bodySchema = z
   .object({
     characterId: z.string(),
     content: z.string().trim().max(MAX_INPUT_LENGTH).default(""),
     image: z.instanceof(File).optional(),
+    episodeStage: z.coerce.number().int().min(1).max(EPISODE_COUNT).optional(),
   })
-  .refine((b) => b.content.length > 0 || b.image);
+  .refine((b) =>
+    b.episodeStage != null ? b.content.length === 0 && !b.image : b.content.length > 0 || b.image,
+  );
 
 async function parseBody(request: Request) {
   const form = await request.formData().catch(() => null);
@@ -35,6 +47,7 @@ async function parseBody(request: Request) {
     characterId: form.get("characterId"),
     content: form.get("content") ?? undefined,
     image: form.get("image") ?? undefined,
+    episodeStage: form.get("episodeStage") ?? undefined,
   });
   return parsed.success ? parsed.data : null;
 }
@@ -101,6 +114,28 @@ export async function POST(request: Request) {
     console.error("[chat] loadChatContext failed", e);
     return json({ ok: false, error: "SERVER_ERROR" }, 500);
   }
+  const { room } = context;
+
+  // 에피소드 시작: 다음 진행할 단계가 맞는지 확인하고 played_stage를 먼저 올려 둔다 (중복 진행 방지).
+  // 답장이 실패하거나 저장되지 않으면 releaseEpisode로 되돌림
+  let episodeStage: number | undefined;
+  if (body.episodeStage != null) {
+    const next = nextEpisodeStage(room, character.episodes);
+    let claimed = false;
+    if (next === body.episodeStage) {
+      try {
+        claimed = await claimEpisode(admin, roomId, room.playedStage, next);
+      } catch (e) {
+        console.error("[chat] claimEpisode failed", e);
+        return json({ ok: false, error: "SERVER_ERROR", wallet }, 500);
+      }
+    }
+    if (!claimed) return json({ ok: false, error: "EPISODE_UNAVAILABLE", wallet }, 409);
+    episodeStage = body.episodeStage;
+  }
+  const releaseClaim = async () => {
+    if (episodeStage != null) await releaseEpisode(admin, roomId, room.playedStage, episodeStage);
+  };
 
   const turnId = crypto.randomUUID();
   const startedAt = Date.now();
@@ -111,6 +146,8 @@ export async function POST(request: Request) {
     history: context.history,
     userMessage: content,
     userImage: image?.data,
+    affection: room.affection,
+    episodeStage,
   });
 
   const model = geminiModel();
@@ -138,12 +175,13 @@ export async function POST(request: Request) {
 
   // 실패·차단된 답변은 과금하지 않음 (사용자에게 답이 안 갔으므로)
   if (reply.status !== "SUCCESS") {
-    await logCall(reply.status, { error_code: reply.errorCode });
+    await Promise.all([logCall(reply.status, { error_code: reply.errorCode }), releaseClaim()]);
     captureServerEvent(user.id, "chat_reply_failed", {
       character_id: character.id,
       status: reply.status,
       error_code: reply.errorCode,
       has_image: image != null,
+      episode_stage: episodeStage,
     });
     return reply.status === "BLOCKED"
       ? json({ ok: false, error: "BLOCKED", wallet }, 422)
@@ -164,25 +202,20 @@ export async function POST(request: Request) {
 
   // 5. user/assistant 메시지 저장 (한 문장으로 같이 저장 → 실패 시 둘 다 없음)
   //    AI 답장은 묘사+대사를 한 행에 (lib/chat/content.ts 형식). chat_rooms.last_message_* 는 DB 트리거가 갱신
+  //    에피소드 시작 턴은 사용자 메시지 없이 AI 답장만 (첫 만남 메시지와 같은 형태의 턴)
+  const userRow = {
+    room_id: roomId,
+    turn_id: turnId,
+    role: "USER",
+    content,
+    image_path: imagePath,
+    image_width: image?.width,
+    image_height: image?.height,
+  };
+  const assistantRow = { room_id: roomId, turn_id: turnId, role: "ASSISTANT", content: reply.content };
   const { data: saved, error: saveError } = await admin
     .from("messages")
-    .insert([
-      {
-        room_id: roomId,
-        turn_id: turnId,
-        role: "USER",
-        content,
-        image_path: imagePath,
-        image_width: image?.width,
-        image_height: image?.height,
-      },
-      {
-        room_id: roomId,
-        turn_id: turnId,
-        role: "ASSISTANT",
-        content: reply.content,
-      },
-    ])
+    .insert(episodeStage != null ? [assistantRow] : [userRow, assistantRow])
     .select(MESSAGE_COLUMNS)
     .order("id");
 
@@ -191,10 +224,12 @@ export async function POST(request: Request) {
     cached_input_tokens: reply.usage.cachedInput,
     output_tokens: reply.usage.output,
     thought_tokens: reply.usage.thoughts,
+    affection_delta: episodeStage != null ? null : reply.affectionDelta,
   });
 
   if (saveError) {
     console.error("[chat] messages insert failed", saveError);
+    await releaseClaim();
     if (imagePath) {
       await deleteChatImage(imagePath).catch((e) => console.error("[chat] R2 cleanup failed", e));
     }
@@ -209,6 +244,36 @@ export async function POST(request: Request) {
     wallet = charged.wallet;
   } catch (e) {
     console.error("[chat] charge_ruby_usage failed", e);
+  }
+
+  // 호감도 반영 (답장이 저장된 뒤에만). 실패해도 답장은 그대로 보내고 기존 호감도를 돌려준다
+  let roomAfter: RoomAffection =
+    episodeStage != null ? { ...room, playedStage: episodeStage } : room;
+  let unlocked = false;
+  if (episodeStage == null && reply.affectionDelta !== 0) {
+    try {
+      const applied = await applyAffection(admin, roomId, reply.affectionDelta);
+      roomAfter = applied.room;
+      unlocked = applied.newlyUnlocked;
+    } catch (e) {
+      console.error("[chat] apply_affection failed", e);
+    }
+  }
+  const relationship = toRelationshipView(roomAfter, character.episodes);
+  // 시나리오가 비어 있는 단계는 해금 기록만 하고 모달을 띄우지 않는다
+  const newlyUnlocked = unlocked && relationship.nextEpisodeStage != null;
+  if (unlocked) {
+    captureServerEvent(user.id, "relationship_stage_reached", {
+      character_id: character.id,
+      unlocked_stage: roomAfter.unlockedStage,
+      has_episode: newlyUnlocked,
+    });
+  }
+  if (episodeStage != null) {
+    captureServerEvent(user.id, "episode_started", {
+      character_id: character.id,
+      episode_stage: episodeStage,
+    });
   }
 
   // 6. 응답을 보낸 뒤 장기 기억 갱신 (조건이 안 되면 DB 조회 2번만 하고 끝)
@@ -236,7 +301,13 @@ export async function POST(request: Request) {
     rubies_charged: rubiesCharged,
     free_balance: wallet.free,
     paid_balance: wallet.paid,
+    episode_stage: episodeStage,
+    affection_delta: episodeStage != null ? undefined : reply.affectionDelta,
+    affection: roomAfter.affection,
   });
 
-  return json({ ok: true, messages: saved as ChatMessage[], wallet }, 200);
+  return json(
+    { ok: true, messages: saved as ChatMessage[], wallet, relationship, newlyUnlocked },
+    200,
+  );
 }

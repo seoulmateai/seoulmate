@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import type { RelationshipView } from "@/lib/affection/stages";
 import type { RubyWallet } from "@/lib/billing/pricing";
 import { MESSAGE_PAGE_SIZE } from "@/lib/chat/constants";
 import { parseMessageContent } from "@/lib/chat/content";
@@ -18,7 +19,9 @@ import {
 } from "@/lib/chat/types";
 import { createClient } from "@/lib/supabase/client";
 
+import { AffectionBar } from "./affection-bar";
 import { ChatInput } from "./chat-input";
+import { EpisodeDialog } from "./episode-dialog";
 import { LimitDialog } from "./limit-dialog";
 import { MessageList, type OutboxItem, type RevealState } from "./message-list";
 
@@ -42,18 +45,25 @@ const ERROR_TEXT: Record<string, string> = {
   INVALID_IMAGE: "This photo couldn't be sent. Try a different one.",
 };
 
+const EPISODE_ERROR_TEXT: Record<string, string> = {
+  EPISODE_UNAVAILABLE: "This episode isn't available right now.",
+  BLOCKED: "The episode couldn't start. Please try again.",
+};
+
 export function ChatRoom({
   roomId,
   character,
   initialMessages,
   initialHasMore,
   initialWallet,
+  initialRelationship,
 }: {
   roomId: number;
   character: ChatCharacter;
   initialMessages: ChatMessage[];
   initialHasMore: boolean;
   initialWallet: RubyWallet;
+  initialRelationship: RelationshipView;
 }) {
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
@@ -69,13 +79,18 @@ export function ChatRoom({
   const [imageError, setImageError] = useState<string | null>(null);
   // 諛⑷툑 諛쏆? ?듭옣???⑤씫蹂꾨줈 蹂댁뿬二쇰뒗 以묒씠硫?吏꾪뻾 ?곹깭
   const [reveal, setReveal] = useState<RevealState | null>(null);
+  const [relationship, setRelationship] = useState(initialRelationship);
+  // 방금 해금된 에피소드 단계 → 답장 공개가 끝나면 모달로 안내
+  const [unlockedStage, setUnlockedStage] = useState<number | null>(null);
+  const [episodeStarting, setEpisodeStarting] = useState(false);
+  const [episodeError, setEpisodeError] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   // ?댁쟾 硫붿떆吏瑜??꾩뿉 遺숈씪 ??蹂대뜕 ?꾩튂瑜??좎??섍린 ?꾪븳 媛?
   const prependAnchor = useRef<{ height: number; top: number } | null>(null);
 
-  const sending = outbox.some((m) => m.status === "sending");
+  const sending = outbox.some((m) => m.status === "sending") || episodeStarting;
   const rubies = wallet.free + wallet.paid;
 
   // ?ㅽ겕濡??꾩튂: ?댁쟾 硫붿떆吏 濡쒕뱶 ???꾩튂 ?좎? / 洹???泥?吏꾩엯, ??硫붿떆吏) ??留??꾨옒
@@ -157,6 +172,73 @@ export function ChatRoom({
     return () => observer.disconnect();
   }, [hasMore, loadOlder]);
 
+  /** 답장 성공 공통 처리: 메시지 추가 + 답장 공개 애니메이션 + 루비·호감도 갱신 */
+  function showReply(body: Extract<ChatApiResponse, { ok: true }>) {
+    setMessages((prev) => [...prev, ...body.messages]);
+    const reply = [...body.messages].reverse().find((m) => m.role === "ASSISTANT");
+    const parts = reply ? parseMessageContent(reply.content) : [];
+    setReveal(
+      reply && parts.length > 0 && canAnimate()
+        ? { messageId: reply.id, parts, step: 0, chars: 0 }
+        : null,
+    );
+    setWallet(body.wallet);
+    setRelationship(body.relationship);
+    setEpisodeError(null);
+    if (body.newlyUnlocked && body.relationship.nextEpisodeStage != null) {
+      setUnlockedStage(body.relationship.nextEpisodeStage);
+    }
+  }
+
+  /** 에피소드 시작: 사용자 메시지 없이 AI가 에피소드를 여는 답장 1개를 받는다 */
+  async function startEpisode(stage: number) {
+    setUnlockedStage(null);
+    if (sending) return;
+    if (rubies < 1) {
+      setLimitOpen(true);
+      return;
+    }
+    setReveal(null);
+    setEpisodeError(null);
+    setEpisodeStarting(true);
+    let body: ChatApiResponse | null = null;
+    try {
+      const form = new FormData();
+      form.set("characterId", character.id);
+      form.set("episodeStage", String(stage));
+      const res = await fetch("/api/chat", { method: "POST", body: form });
+      body = await res.json().catch(() => null);
+    } catch {
+      body = null;
+    }
+    setEpisodeStarting(false);
+
+    if (body?.ok) {
+      showReply(body);
+      router.refresh();
+      return;
+    }
+    if (body?.wallet) setWallet(body.wallet);
+    switch (body?.error) {
+      case "INSUFFICIENT_RUBY":
+        setLimitOpen(true);
+        return;
+      case "UNAUTHENTICATED":
+        router.push(`/login?next=/chats/${character.id}`);
+        return;
+      case "EPISODE_UNAVAILABLE":
+        // 다른 탭에서 이미 진행했거나 시나리오가 바뀜 → 서버 상태로 다시 그림
+        setRelationship((r) => ({ ...r, nextEpisodeStage: null }));
+        setEpisodeError(EPISODE_ERROR_TEXT.EPISODE_UNAVAILABLE);
+        router.refresh();
+        return;
+      default:
+        setEpisodeError(
+          EPISODE_ERROR_TEXT[body?.error ?? ""] ?? "The episode couldn't start. Please try again.",
+        );
+    }
+  }
+
   async function deliver(localId: string, content: string, image?: PreparedImage) {
     let res: Response;
     let body: ChatApiResponse | null = null;
@@ -174,15 +256,7 @@ export function ChatRoom({
     if (body?.ok) {
       if (image) URL.revokeObjectURL(image.previewUrl);
       setOutbox((prev) => prev.filter((m) => m.localId !== localId));
-      setMessages((prev) => [...prev, ...body.messages]);
-      const reply = [...body.messages].reverse().find((m) => m.role === "ASSISTANT");
-      const parts = reply ? parseMessageContent(reply.content) : [];
-      setReveal(
-        reply && parts.length > 0 && canAnimate()
-          ? { messageId: reply.id, parts, step: 0, chars: 0 }
-          : null,
-      );
-      setWallet(body.wallet);
+      showReply(body);
       // ?쇱そ ???紐⑸줉??留덉?留?硫붿떆吏쨌?쒓컖 媛깆떊
       router.refresh();
       return;
@@ -328,31 +402,42 @@ export function ChatRoom({
         </div>
       </header>
 
-      <div
-        ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3.5 pt-2 pb-5 md:px-[clamp(20px,4vw,58px)]"
-      >
-        <div ref={topSentinelRef} />
-        {loadingOlder && (
-          <div className="flex justify-center py-3">
-            <Loader2 className="size-5 animate-spin text-primary/60" />
-          </div>
-        )}
-        {!hasMore && messages.length === 0 && outbox.length === 0 && (
-          <p className="mt-10 text-center text-sm text-muted-foreground">
-            <strong className="mb-1.5 block text-foreground">Your story starts here</strong>
-            Say hi to {character.name}!
-          </p>
-        )}
-        <MessageList
-          character={character}
-          messages={messages}
-          outbox={outbox}
-          typing={sending}
-          reveal={reveal}
-          onResend={resend}
-          onDiscard={discard}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <AffectionBar
+          relationship={relationship}
+          starting={episodeStarting}
+          disabled={sending || revealing}
+          error={episodeError}
+          onStartEpisode={startEpisode}
         />
+
+        {/* pt-14: 위에 떠 있는 호감도 칩에 첫 메시지가 가려지지 않게 */}
+        <div
+          ref={scrollRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3.5 pt-14 pb-5 md:px-[clamp(20px,4vw,58px)]"
+        >
+          <div ref={topSentinelRef} />
+          {loadingOlder && (
+            <div className="flex justify-center py-3">
+              <Loader2 className="size-5 animate-spin text-primary/60" />
+            </div>
+          )}
+          {!hasMore && messages.length === 0 && outbox.length === 0 && (
+            <p className="mt-10 text-center text-sm text-muted-foreground">
+              <strong className="mb-1.5 block text-foreground">Your story starts here</strong>
+              Say hi to {character.name}!
+            </p>
+          )}
+          <MessageList
+            character={character}
+            messages={messages}
+            outbox={outbox}
+            typing={sending}
+            reveal={reveal}
+            onResend={resend}
+            onDiscard={discard}
+          />
+        </div>
       </div>
 
       <ChatInput
@@ -368,6 +453,13 @@ export function ChatRoom({
       />
 
       <LimitDialog open={limitOpen} onOpenChange={setLimitOpen} />
+      {/* 답장 공개(타이핑 효과)가 끝난 뒤에 띄운다 */}
+      <EpisodeDialog
+        stage={revealing ? null : unlockedStage}
+        characterName={character.name}
+        onStart={startEpisode}
+        onClose={() => setUnlockedStage(null)}
+      />
     </div>
   );
 }
