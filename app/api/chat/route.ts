@@ -21,7 +21,7 @@ import { generateReply } from "@/lib/gemini/reply";
 import { captureServerEvent } from "@/lib/posthog/server";
 import { deleteChatImage, putChatImage } from "@/lib/r2/chat-images";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getRequestUser } from "@/lib/supabase/request";
 
 // 답변(최대 25초) 후 after()의 장기 기억 요약(최대 20초)까지 이 시간 안에 끝나야 한다
 export const maxDuration = 60;
@@ -57,11 +57,8 @@ function json(body: ChatApiResponse, status: number) {
 }
 
 export async function POST(request: Request) {
-  // 1. 세션 · 온보딩 확인
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // 1. 세션 · 온보딩 확인. 웹은 쿠키, 앱은 Authorization: Bearer
+  const { supabase, user } = await getRequestUser(request);
   if (!user) return json({ ok: false, error: "UNAUTHENTICATED" }, 401);
 
   const body = await parseBody(request);

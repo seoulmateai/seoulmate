@@ -97,6 +97,31 @@ export type ReplyResult =
     }
   | LlmFailure;
 
+const BUSY_RETRY_MS = [1000, 3000];
+
+function httpStatus(error: unknown) {
+  if (!error || typeof error !== "object" || !("status" in error)) return undefined;
+  const status = (error as { status?: unknown }).status;
+  return typeof status === "number" ? status : undefined;
+}
+
+/** 503/429는 잠시 후 같은 요청을 다시 보낸다. 시간 초과는 그대로 실패시킨다. */
+async function generateContentWhenReady(
+  request: Parameters<ReturnType<typeof getClient>["models"]["generateContent"]>[0],
+) {
+  let attempt = 0;
+  for (;;) {
+    try {
+      return await getClient().models.generateContent(request);
+    } catch (error) {
+      const status = httpStatus(error);
+      if ((status !== 429 && status !== 503) || attempt >= BUSY_RETRY_MS.length) throw error;
+      await new Promise((resolve) => setTimeout(resolve, BUSY_RETRY_MS[attempt]));
+      attempt += 1;
+    }
+  }
+}
+
 export async function generateReply({
   character,
   nickname,
@@ -132,7 +157,7 @@ export async function generateReply({
     if (episodeStage != null) parts.push({ text: EPISODE_CUE });
     appendParts(contents, "user", parts);
 
-    const res = await getClient().models.generateContent({
+    const res = await generateContentWhenReady({
       model: geminiModel(),
       contents,
       config: {

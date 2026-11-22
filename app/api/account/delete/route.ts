@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { captureServerEvent } from "@/lib/posthog/server";
 import { deleteUserChatImages } from "@/lib/r2/chat-images";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getRequestUser } from "@/lib/supabase/request";
 
 // 회원 탈퇴
 //  1. (TODO: 결제 추가 시) Stripe 구독 취소
@@ -13,16 +13,14 @@ import { createClient } from "@/lib/supabase/server";
 //     llm_calls / reports 는 user_id가 NULL로 남음
 //  5. PostHog account_deleted 기록. 클라이언트 posthog.reset()은 signOut 시 AuthProvider가 처리
 export async function POST(request: NextRequest) {
-  // 다른 사이트에서 보낸 요청 차단
+  // 브라우저 요청만 Origin을 검사한다. 앱은 Authorization Bearer로 인증하고 Origin이 없다.
+  const bearer = /^Bearer\s+\S+\s*$/i.test(request.headers.get("authorization") ?? "");
   const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) {
+  if (!bearer && origin && origin !== request.nextUrl.origin) {
     return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user } = await getRequestUser(request);
   if (!user) return NextResponse.json({ ok: false, error: "UNAUTHENTICATED" }, { status: 401 });
 
   const admin = createAdminClient();
