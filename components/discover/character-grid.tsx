@@ -1,9 +1,11 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
+import { AuthGatedLink } from "@/components/auth/auth-gated-link";
 import type { CharacterAvatar, CharacterBadge } from "@/lib/characters/types";
 import { cn } from "@/lib/utils";
 
@@ -21,14 +23,9 @@ type Filter = "all" | CharacterBadge;
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "All" },
-  { value: "popular", label: "Popular" },
-  { value: "new", label: "New faces" },
+  { value: "popular", label: "Hot" },
+  { value: "new", label: "New" },
 ];
-
-const BADGE_LABEL: Record<CharacterBadge, string> = {
-  popular: "POPULAR",
-  new: "NEW FACE",
-};
 
 export function CharacterGrid({ characters }: { characters: CharacterCard[] }) {
   const [filter, setFilter] = useState<Filter>("all");
@@ -38,9 +35,12 @@ export function CharacterGrid({ characters }: { characters: CharacterCard[] }) {
     <section id="characters" aria-label="Characters" className="scroll-mt-24">
       <div className="mb-5 flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="mb-2 text-xs font-extrabold tracking-[2px] text-coral uppercase">Featured</p>
-          <h2 className="text-2xl font-extrabold tracking-[-0.6px]">Meet your Seoulmates</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">Tap a card to open the full profile.</p>
+          <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-coral uppercase">
+            Choose your type
+          </p>
+          <h2 className="text-[clamp(26px,3vw,36px)] font-extrabold tracking-[-0.04em]">
+            Who are you texting tonight?
+          </h2>
         </div>
         <div className="flex flex-wrap gap-2">
           {FILTERS.map(({ value, label }) => (
@@ -50,10 +50,10 @@ export function CharacterGrid({ characters }: { characters: CharacterCard[] }) {
               aria-pressed={filter === value}
               onClick={() => setFilter(value)}
               className={cn(
-                "cursor-pointer rounded-full border px-4 py-2.5 text-xs transition-colors",
+                "cursor-pointer rounded-full border px-4 py-2 text-xs font-semibold transition-colors",
                 filter === value
-                  ? "border-coral/40 bg-coral-soft font-bold text-coral"
-                  : "border-border bg-card text-muted-foreground hover:text-coral",
+                  ? "btn-gradient border-transparent"
+                  : "border-white/15 bg-transparent text-white/70 hover:text-white",
               )}
             >
               {label}
@@ -62,14 +62,19 @@ export function CharacterGrid({ characters }: { characters: CharacterCard[] }) {
         </div>
       </div>
 
-      <ul className="grid grid-cols-2 gap-3 md:gap-5 min-[1050px]:grid-cols-4">
-        {visible.map((character, i) => (
-          <li key={character.id}>
-            <Link
-              href={`/characters/${character.id}`}
-              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-[transform,border-color] duration-250 hover:-translate-y-1.5 hover:border-coral/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      {visible.length === 0 ? (
+        <p className="py-10 text-sm text-muted-foreground">No one in this filter yet.</p>
+      ) : (
+        <ul className="grid grid-cols-2 gap-3 md:gap-4 min-[1050px]:grid-cols-4">
+          {visible.map((character, i) => (
+            <li
+              key={character.id}
+              className="relative overflow-hidden rounded-[22px] border border-white/10 bg-card"
             >
-              <div className="relative aspect-[3/4] bg-muted">
+              <Link
+                href={`/characters/${character.id}`}
+                className="group relative block aspect-[3/4.15] focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+              >
                 <Image
                   src={character.avatar.src}
                   alt={`Portrait of ${character.name}`}
@@ -80,30 +85,38 @@ export function CharacterGrid({ characters }: { characters: CharacterCard[] }) {
                   sizes="(max-width: 1050px) 50vw, 280px"
                   className="object-cover object-top transition-transform duration-500 group-hover:scale-[1.04]"
                 />
-                <span className="absolute top-2.5 left-2.5 rounded-full bg-black/65 px-2.5 py-1.5 text-[9px] font-bold tracking-[0.3px] text-white backdrop-blur-sm md:top-3.5 md:left-3.5 md:text-[10px]">
-                  {BADGE_LABEL[character.badge]}
+                <div className="absolute inset-0 bg-linear-to-t from-black via-black/25 to-black/10" />
+                <span
+                  className={cn(
+                    "absolute top-3 left-3 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wide",
+                    character.badge === "popular"
+                      ? "bg-coral text-white"
+                      : "border border-coral/70 bg-black/40 text-coral",
+                  )}
+                >
+                  {character.badge === "popular" ? "HOT" : "NEW"}
                 </span>
-              </div>
-              <div className="flex flex-col gap-1 p-3.5 md:p-4">
-                <p className="flex items-baseline gap-2">
-                  <span className="text-[17px] font-extrabold tracking-[-0.4px] md:text-xl">
-                    {character.name}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground md:text-[13px]">
-                    {character.age}
-                  </span>
-                </p>
-                <p className="text-[11px] text-muted-foreground md:text-[13px]">
-                  {character.occupation}
-                </p>
-                <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-foreground/75">
-                  {character.bio}
-                </p>
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+                <div className="absolute inset-x-0 bottom-0 p-3.5 pb-16 md:p-4 md:pb-[4.5rem]">
+                  <p className="text-[17px] font-extrabold tracking-[-0.03em] md:text-xl">
+                    {character.name}, {character.age}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-white/70 md:text-xs">{character.occupation}</p>
+                  <p className="mt-2 line-clamp-2 font-script text-[13px] leading-snug text-white/85">
+                    &ldquo;{character.bio}&rdquo;
+                  </p>
+                </div>
+              </Link>
+              <AuthGatedLink
+                href={`/chats/${character.id}`}
+                className="btn-gradient absolute inset-x-3.5 bottom-3.5 z-10 inline-flex h-9 items-center justify-center gap-1 rounded-full text-xs font-bold transition-[filter] hover:brightness-110 md:inset-x-4 md:bottom-4 md:h-10 md:text-sm"
+              >
+                Chat now
+                <ArrowRight className="size-3.5" aria-hidden />
+              </AuthGatedLink>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

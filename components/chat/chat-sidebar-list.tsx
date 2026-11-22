@@ -30,14 +30,14 @@ export function ChatSidebarList({ items }: { items: ChatSidebarItem[] }) {
     <>
       <div className="px-4 pt-4 pb-2.5 md:px-5.5 md:pt-5.5 md:pb-4">
         <h1 className="mb-3 text-xl font-extrabold tracking-[-0.6px] md:mb-4 md:text-[22px]">
-          My Chats
+          Messages
         </h1>
         {items.length > 0 && (
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search conversations..."
+            placeholder="Search your Seoulmates"
             aria-label="Search conversations"
             className="h-[42px] w-full rounded-xl border border-border bg-muted px-3.5 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-coral"
           />
@@ -53,14 +53,14 @@ export function ChatSidebarList({ items }: { items: ChatSidebarItem[] }) {
           </p>
           <Link
             href="/"
-            className="rounded-[13px] bg-coral px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-coral-dark"
+            className="btn-gradient rounded-full px-5 py-3 text-sm font-bold transition-[filter] hover:brightness-110"
           >
             Meet the characters
           </Link>
         </div>
       ) : (
         // 모바일: 목록이 플로팅 하단 탭 뒤로 스크롤되므로 마지막 항목이 가려지지 않게 여백을 둔다
-        <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-(--bottomtab-h) md:px-3 md:pb-3.5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-2 md:px-3">
           <p className="px-2.5 pt-3 pb-2 text-[10px] font-extrabold tracking-[1.2px] text-muted-foreground uppercase">
             Recent conversations
           </p>
@@ -77,8 +77,8 @@ export function ChatSidebarList({ items }: { items: ChatSidebarItem[] }) {
                     href={href}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-3 rounded-[13px] px-2.5 py-2.5 transition-colors",
-                      active ? "bg-coral-soft" : "hover:bg-muted",
+                      "flex items-center gap-3 rounded-[16px] border px-2.5 py-2.5 transition-colors",
+                      active ? "border-coral/50 bg-coral-soft" : "border-transparent hover:bg-white/4",
                     )}
                   >
                     <Image
@@ -107,6 +107,16 @@ export function ChatSidebarList({ items }: { items: ChatSidebarItem[] }) {
               );
             })}
           </ul>
+        </div>
+      )}
+      {items.length > 0 && (
+        <div className="px-3 pt-1 pb-(--bottomtab-h) md:pb-3.5">
+          <Link
+            href="/"
+            className="flex h-11 items-center justify-center rounded-2xl border border-dashed border-coral/40 text-sm font-semibold text-coral transition-colors hover:bg-coral-soft"
+          >
+            + Meet someone new
+          </Link>
         </div>
       )}
     </>

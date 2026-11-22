@@ -6,13 +6,14 @@
 
 @theme inline {
   --color-background: var(--background);
-  --color-chat: #18181d; /* 채팅방 배경 */
-  --color-coral: #ff7772;
-  --color-coral-dark: #f26360;
-  --color-coral-soft: rgb(255 119 114 / 14%);
-  --color-bubble-user: #43282b; /* 코랄 톤 (차분하지만 배경과 확실히 구분되는 밝기) */
-  --color-bubble-user-foreground: #ffe4e1; /* 연한 핑크 글자 */
-  --color-bubble-ai: #23232b; /* 채팅방 배경(#18181d)과 구분되는 밝기 */
+  --color-chat: #0c0b10; /* 채팅방 배경 */
+  --color-coral: #ff4b95;
+  --color-coral-dark: #e02678;
+  --color-coral-soft: rgb(255 75 149 / 16%);
+  --color-bubble-user: #ff4b95;
+  --color-bubble-user-foreground: #ffffff;
+  --color-bubble-ai: #241c2a; /* 채팅방 배경과 구분되는 보라 톤 */
+  --font-script: var(--font-instrument), Georgia, serif;
   --color-foreground: var(--foreground);
   --font-sans: var(--font-dm-sans);
   --font-heading: var(--font-dm-sans);
@@ -57,42 +58,52 @@
 /* Dark-only palette. `.dark` matches `html.dark` so it wins over the default theme. */
 :root,
 .dark {
-  --background: #131318;
-  --foreground: #f4f4f5;
-  --card: #1e1e25;
-  --card-foreground: #f4f4f5;
-  --popover: #23232b;
-  --popover-foreground: #f4f4f5;
-  --primary: #ff7772; /* logo coral */
+  --background: #07070b;
+  --foreground: #f6f3f5;
+  --card: #141218;
+  --card-foreground: #f6f3f5;
+  --popover: #1a161e;
+  --popover-foreground: #f6f3f5;
+  --primary: #ff4b95;
   --primary-foreground: #ffffff;
-  --secondary: #282830;
-  --secondary-foreground: #f4f4f5;
-  --muted: #23232b;
-  --muted-foreground: #a6a6ae;
-  --accent: #2e2426;
-  --accent-foreground: #f4f4f5;
+  --secondary: #1c1822;
+  --secondary-foreground: #f6f3f5;
+  --muted: #1a1620;
+  --muted-foreground: #9b94a3;
+  --accent: #2a1824;
+  --accent-foreground: #f6f3f5;
   --destructive: #e35d5d;
-  --border: rgb(255 255 255 / 12%);
-  --input: rgb(255 255 255 / 16%);
-  --ring: #ff7772;
+  --border: rgb(255 255 255 / 10%);
+  --input: rgb(255 255 255 / 14%);
+  --ring: #ff4b95;
   /* 상단 바 높이 (채팅 화면 높이 계산에도 사용) */
   --topbar-h: 4.5rem;
-  /* 모바일 플로팅 탭에 가려지지 않게 비워 둘 높이 (탭 3.75rem + 아래 간격 1.125rem + 위 여유 0.5rem) */
-  --bottomtab-h: calc(5.375rem + env(safe-area-inset-bottom));
-  --chart-1: #ff7772;
+  /* 모바일 하단 탭에 가려지지 않게 비워 둘 높이 */
+  --bottomtab-h: calc(4.25rem + env(safe-area-inset-bottom));
+  --chart-1: #ff4b95;
   --chart-2: #9b9ba3;
   --chart-3: #6e6e78;
   --chart-4: #3a3a44;
   --chart-5: #2c2c34;
   --radius: 0.625rem;
-  --sidebar: #1a1a20;
-  --sidebar-foreground: #f4f4f5;
-  --sidebar-primary: #ff7772;
+  --sidebar: #100e14;
+  --sidebar-foreground: #f6f3f5;
+  --sidebar-primary: #ff4b95;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #282830;
   --sidebar-accent-foreground: #f4f4f5;
   --sidebar-border: rgb(255 255 255 / 12%);
-  --sidebar-ring: #ff7772;
+  --sidebar-ring: #ff4b95;
+}
+
+/* 시안의 핑크→보라 버튼. 호버는 brightness로 처리한다. */
+@utility btn-gradient {
+  background-image: linear-gradient(100deg, #ff4b95 0%, #7b5cff 100%);
+  color: #fff;
+}
+
+@utility story-ring {
+  background-image: linear-gradient(135deg, #ff4b95, #7b5cff);
 }
 
 @layer base {

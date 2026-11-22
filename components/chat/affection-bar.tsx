@@ -10,7 +10,7 @@ import { MAX_AFFECTION, stageIndex, stageLabel, type RelationshipView } from "@/
 // 색은 채팅방 헤더와 같은 테마 토큰(card·border·muted·coral)을 쓰고, 배경만 살짝 비치게 한다.
 // 부모는 position: relative 이어야 함 (chat-room.tsx)
 const CHIP =
-  "pointer-events-auto flex items-center rounded-full border border-border bg-card/85 shadow-md backdrop-blur-md";
+  "pointer-events-auto flex w-full max-w-xl items-center rounded-full border border-white/10 bg-[#16121c]/90 shadow-md backdrop-blur-md";
 
 export function AffectionBar({
   relationship,
@@ -33,7 +33,7 @@ export function AffectionBar({
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex flex-col items-center gap-1.5 px-3.5">
-      <div className={`${CHIP} max-w-full gap-2.5 px-3 py-1.5`}>
+      <div className={`${CHIP} gap-2.5 px-3 py-1.5`}>
         <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-bold text-coral">
           <Heart className="size-3.5 fill-current" aria-hidden />
           {label}
@@ -44,10 +44,10 @@ export function AffectionBar({
           aria-valuemin={0}
           aria-valuemax={MAX_AFFECTION}
           aria-valuenow={affection}
-          className="h-1.5 w-36 min-w-12 shrink overflow-hidden rounded-full bg-muted sm:w-56"
+          className="h-1.5 min-w-16 flex-1 overflow-hidden rounded-full bg-white/10"
         >
           <div
-            className="h-full rounded-full bg-coral transition-[width] duration-700 ease-out motion-reduce:transition-none"
+            className="btn-gradient h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
             style={{ width: `${percent}%` }}
           />
         </div>

@@ -1,8 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import logo from "@/assets/logo.webp";
+import { Wordmark } from "@/components/layout/wordmark";
 import { SLOGAN } from "@/lib/slogan";
 
 import { LoginPageForm } from "./login-page-form";
@@ -13,7 +12,7 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-8 px-6 py-12">
       <div className="flex flex-col items-center gap-3 text-center">
         <Link href="/">
-          <Image src={logo} alt="seoulmate" priority className="h-8 w-auto" />
+          <Wordmark className="text-[28px]" />
         </Link>
         <p className="text-sm text-muted-foreground">{SLOGAN}</p>
       </div>

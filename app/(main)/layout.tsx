@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { BottomTabBar } from "@/components/layout/bottom-tab-bar";
 import { TopNav, TopNavFallback } from "@/components/layout/top-nav";
 
-// 메뉴(Home / Chats / My page)가 있는 화면들. PC는 상단 바, 모바일은 하단 탭
+// 메뉴(Home / Feed / Chats / My page)가 있는 화면들. PC는 상단 바, 모바일은 하단 탭
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh w-full flex-col bg-background">

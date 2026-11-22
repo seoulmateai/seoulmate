@@ -20,6 +20,7 @@ export function ChatInput({
   imageError,
   onPickImage,
   onRemoveImage,
+  placeholder = "Write a message...",
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -31,6 +32,7 @@ export function ChatInput({
   imageError: string | null;
   onPickImage: (file: File) => void;
   onRemoveImage: () => void;
+  placeholder?: string;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -101,7 +103,7 @@ export function ChatInput({
           {imageError && <p className="text-xs text-destructive">{imageError}</p>}
         </div>
       )}
-      <div className="flex items-end gap-2.5 rounded-2xl border border-border bg-card py-2 pr-2 pl-2 focus-within:border-coral/60">
+      <div className="flex items-end gap-1.5 rounded-full border border-white/12 bg-[#141218] py-1.5 pr-1.5 pl-1.5 focus-within:border-coral/50">
         <input
           ref={fileRef}
           type="file"
@@ -129,7 +131,7 @@ export function ChatInput({
           rows={1}
           value={value}
           maxLength={MAX_INPUT_LENGTH}
-          placeholder="Write a message..."
+          placeholder={placeholder}
           aria-label="Message"
           className="min-h-[43px] flex-1 resize-none bg-transparent py-2.5 text-[13px] leading-6 text-foreground outline-none placeholder:text-muted-foreground"
           onChange={(e) => onChange(e.target.value)}
@@ -160,8 +162,8 @@ export function ChatInput({
             onMouseDown={(e) => e.preventDefault()}
             onClick={insertAsterisk}
             className={cn(
-              "grid size-[43px] place-items-center rounded-[13px] transition-colors",
-              narrating ? "text-coral" : "text-muted-foreground hover:text-coral",
+              "grid size-10 place-items-center rounded-full transition-colors",
+              narrating ? "bg-coral-soft text-coral" : "text-muted-foreground hover:text-coral",
             )}
           >
             <Asterisk className="size-5" strokeWidth={2.5} />
@@ -172,10 +174,10 @@ export function ChatInput({
           aria-label="Send message"
           disabled={!canSend}
           className={cn(
-            "grid size-[43px] shrink-0 place-items-center rounded-[13px] transition-colors",
+            "grid size-10 shrink-0 place-items-center rounded-full transition-[filter]",
             canSend
-              ? "bg-coral text-white shadow-[0_4px_10px_#ff777244] hover:bg-coral-dark"
-              : "bg-muted text-muted-foreground",
+              ? "btn-gradient rounded-full hover:brightness-110"
+              : "rounded-full bg-muted text-muted-foreground",
           )}
         >
           <SendHorizontal className="size-[18px]" />

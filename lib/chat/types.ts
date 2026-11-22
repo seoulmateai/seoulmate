@@ -30,6 +30,9 @@ export type ChatCharacter = {
   name: string;
   occupation: string;
   avatar: string;
+  age?: number;
+  bio?: string;
+  keywords?: string[];
 };
 
 /**

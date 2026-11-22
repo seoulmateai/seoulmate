@@ -67,9 +67,13 @@ async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">
       character={{
         id: character.id,
         name: character.name,
+        age: character.age,
         occupation: character.occupation,
+        bio: character.bio,
+        keywords: character.keywords,
         avatar: character.avatar.src,
       }}
+      scenesUnlocked={room?.unlocked_stage ?? 0}
       initialMessages={latest.slice(0, MESSAGE_PAGE_SIZE).reverse()}
       initialHasMore={latest.length > MESSAGE_PAGE_SIZE}
       initialWallet={wallet}

@@ -82,7 +82,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
 
           <AuthGatedLink
             href={`/chats/${character.id}`}
-            className="flex h-13 items-center justify-center rounded-[13px] bg-coral text-base font-bold text-white shadow-[0_4px_10px_#ff777244] transition-colors hover:bg-coral-dark md:self-start md:px-12"
+            className="btn-gradient flex h-13 items-center justify-center rounded-full text-base font-bold transition-[filter] hover:brightness-110 md:self-start md:px-12"
           >
             Start chat
           </AuthGatedLink>

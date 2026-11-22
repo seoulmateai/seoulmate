@@ -1,8 +1,5 @@
 "use client";
 
-import Image from "next/image";
-
-import logo from "@/assets/logo.webp";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Wordmark } from "@/components/layout/wordmark";
 
 import { AuthForm } from "./auth-form";
 
@@ -26,7 +24,7 @@ export function LoginDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-5 p-6 sm:max-w-sm">
         <DialogHeader className="items-center text-center">
-          <Image src={logo} alt="seoulmate" className="h-6 w-auto" />
+          <Wordmark />
           <DialogTitle className="sr-only">Log in to seoulmate</DialogTitle>
           <DialogDescription>Log in to start your seoul love story.</DialogDescription>
         </DialogHeader>

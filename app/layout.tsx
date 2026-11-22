@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
+import { DM_Sans, Instrument_Serif } from "next/font/google";
 
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { SLOGAN } from "@/lib/slogan";
@@ -11,6 +11,13 @@ const dmSans = DM_Sans({
   subsets: ["latin"],
 });
 
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument",
+  subsets: ["latin"],
+  weight: "400",
+  style: "italic",
+});
+
 export const metadata: Metadata = {
   title: "seoulmate",
   description: SLOGAN,
@@ -18,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${dmSans.variable} dark h-full antialiased`}>
+    <html lang="en" className={`${dmSans.variable} ${instrumentSerif.variable} dark h-full antialiased`}>
       <body className="min-h-full bg-background">
         <AuthProvider>{children}</AuthProvider>
       </body>

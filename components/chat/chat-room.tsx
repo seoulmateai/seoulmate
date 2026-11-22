@@ -20,6 +20,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 
 import { AffectionBar } from "./affection-bar";
+import { ChatProfile } from "./chat-profile";
 import { ChatInput } from "./chat-input";
 import { EpisodeDialog } from "./episode-dialog";
 import { LimitDialog } from "./limit-dialog";
@@ -57,6 +58,7 @@ export function ChatRoom({
   initialHasMore,
   initialWallet,
   initialRelationship,
+  scenesUnlocked = 0,
 }: {
   roomId: number;
   character: ChatCharacter;
@@ -64,6 +66,8 @@ export function ChatRoom({
   initialHasMore: boolean;
   initialWallet: RubyWallet;
   initialRelationship: RelationshipView;
+  /** 이 방에서 해금된 에피소드 단계. 오른쪽 프로필에만 쓴다 */
+  scenesUnlocked?: number;
 }) {
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
@@ -360,8 +364,9 @@ export function ChatRoom({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-chat">
-      <header className="flex h-[66px] shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3.5 md:h-[76px] md:px-6">
+    <div className="flex min-h-0 flex-1 bg-chat">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="flex h-[66px] shrink-0 items-center justify-between gap-3 border-b border-white/8 bg-black/20 px-3.5 md:h-[76px] md:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/chats"
@@ -375,7 +380,7 @@ export function ChatRoom({
             alt=""
             width={43}
             height={43}
-            className="size-[43px] shrink-0 rounded-full bg-muted object-cover object-top"
+            className="size-[43px] shrink-0 rounded-full bg-muted object-cover object-top ring-2 ring-coral/70"
           />
           <div className="min-w-0">
             <p className="truncate text-base font-extrabold">{character.name}</p>
@@ -384,7 +389,7 @@ export function ChatRoom({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span
-            className="inline-flex items-center gap-1 rounded-full bg-coral-soft px-2.5 py-1.5 text-[11px] font-bold text-coral"
+            className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-2.5 py-1.5 text-[11px] font-bold text-white"
             title={`Free today: ${wallet.free} · Purchased: ${wallet.paid}`}
             aria-label={`${rubies} rubies (free today ${wallet.free}, purchased ${wallet.paid})`}
           >
@@ -450,6 +455,7 @@ export function ChatRoom({
         imageError={imageError}
         onPickImage={pickImage}
         onRemoveImage={removeImage}
+        placeholder={`Message ${character.name}...`}
       />
 
       <LimitDialog open={limitOpen} onOpenChange={setLimitOpen} />
@@ -460,6 +466,8 @@ export function ChatRoom({
         onStart={startEpisode}
         onClose={() => setUnlockedStage(null)}
       />
+      </div>
+      <ChatProfile character={character} unlockedStage={scenesUnlocked} />
     </div>
   );
 }
