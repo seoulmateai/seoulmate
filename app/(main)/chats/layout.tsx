@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { ChatSidebarList } from "@/components/chat/chat-sidebar-list";
 import { ChatsWorkspace } from "@/components/chat/chats-workspace";
-import { requireOnboardedUser } from "@/lib/auth/session";
+import { getCurrentSession, requireOnboardedUser } from "@/lib/auth/session";
 import { getCharactersByIds } from "@/lib/characters";
 
 export default function ChatsLayout({ children }: LayoutProps<"/chats">) {
@@ -23,6 +23,8 @@ export default function ChatsLayout({ children }: LayoutProps<"/chats">) {
 }
 
 async function ChatList() {
+  // 로그인 전 체험 채팅방(/chats/[characterId])에서는 목록이 비어 있다
+  if (!(await getCurrentSession())) return <ChatSidebarList items={[]} />;
   const { supabase } = await requireOnboardedUser("/chats");
 
   // 채팅방: 사용자별 데이터라 매번 조회 (RLS: 본인 채팅방만)

@@ -173,6 +173,75 @@ export type Database = {
           },
         ]
       }
+      guest_turns: {
+        Row: {
+          affection_delta: number | null
+          assistant_content: string | null
+          cached_input_tokens: number | null
+          character_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          id: string
+          input_tokens: number | null
+          ip_hash: string
+          model: string | null
+          output_tokens: number | null
+          persona_version: number | null
+          thought_tokens: number | null
+          user_content: string | null
+        }
+        Insert: {
+          affection_delta?: number | null
+          assistant_content?: string | null
+          cached_input_tokens?: number | null
+          character_id: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          ip_hash: string
+          model?: string | null
+          output_tokens?: number | null
+          persona_version?: number | null
+          thought_tokens?: number | null
+          user_content?: string | null
+        }
+        Update: {
+          affection_delta?: number | null
+          assistant_content?: string | null
+          cached_input_tokens?: number | null
+          character_id?: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          ip_hash?: string
+          model?: string | null
+          output_tokens?: number | null
+          persona_version?: number | null
+          thought_tokens?: number | null
+          user_content?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_turns_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_turns_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inquiries: {
         Row: {
           answer: string | null
@@ -533,32 +602,6 @@ export type Database = {
           },
         ]
       }
-      usage_counters: {
-        Row: {
-          reply_count: number
-          usage_date: string
-          user_id: string
-        }
-        Insert: {
-          reply_count?: number
-          usage_date: string
-          user_id: string
-        }
-        Update: {
-          reply_count?: number
-          usage_date?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "usage_counters_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -587,6 +630,10 @@ export type Database = {
           rubies_charged: number
         }[]
       }
+      claim_guest_turn: {
+        Args: { p_room_id: number; p_turn_id: string; p_user_id: string }
+        Returns: boolean
+      }
       complete_onboarding: {
         Args: {
           p_birth_date: string
@@ -614,10 +661,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      consume_reply_quota: {
-        Args: { p_limit: number; p_user_id: string }
-        Returns: number
-      }
       create_chat_room: {
         Args: { p_character_id: string; p_user_id: string }
         Returns: number
@@ -639,10 +682,17 @@ export type Database = {
           pending_points: number
         }[]
       }
-      refund_reply_quota: { Args: { p_user_id: string }; Returns: undefined }
       refund_rubies: {
         Args: { p_amount: number; p_order_id: string; p_user_id: string }
         Returns: number
+      }
+      reserve_guest_turn: {
+        Args: {
+          p_character_id: string
+          p_daily_limit: number
+          p_ip_hash: string
+        }
+        Returns: string
       }
     }
     Enums: {

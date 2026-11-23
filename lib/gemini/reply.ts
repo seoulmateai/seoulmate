@@ -133,7 +133,8 @@ export async function generateReply({
   episodeStage,
 }: {
   character: CharacterPersona;
-  nickname: string;
+  /** null = 이름을 모르는 사용자 (로그인 전 게스트 체험) */
+  nickname: string | null;
   /** chat_rooms.affection (이번 메시지 반영 전) */
   affection: number;
   /** 이 답장으로 에피소드를 시작하면 단계(1~5). 사용자 메시지 없이 character.episodes[단계 - 1]로 진행 */
@@ -238,7 +239,7 @@ function toStoredReply(raw: string) {
 // 호감도 판정·관계 단계 규칙은 고정 영역, 현재 단계·에피소드는 가변 영역(맨 뒤)에 둔다.
 function buildSystemInstruction(
   character: CharacterPersona,
-  nickname: string,
+  knownNickname: string | null,
   memory: string | null,
   affection: number,
   episodeStage: number | undefined,
@@ -246,6 +247,10 @@ function buildSystemInstruction(
   const section = (title: string, body: string | null) =>
     body?.trim() ? `\n## ${title}\n${body.trim()}\n` : "";
   const episode = episodeStage != null ? character.episodes[episodeStage - 1]?.trim() : null;
+  const nickname = knownNickname ?? "the user";
+  const userSection = knownNickname
+    ? `- The user's name is "${knownNickname}". Call them by this name naturally.`
+    : "- You don't know the user's name yet. Don't call them by any name.";
 
   return `You are role-playing the character described under "# Character" in an interactive romance story with the user. You are that character, not a narrator or an assistant.
 
@@ -294,7 +299,7 @@ Name: ${character.name}
 Age: ${character.age}
 ${section("Appearance", character.appearance)}${section("Background", character.background)}${section("Relationship with the user", character.relationship)}${section("Personality", character.personality)}${section("Speech style", character.speechStyle)}${section("Additional rules", character.extraRules)}${section("Affection triggers", character.affectionTriggers)}${section("Affection loss", character.affectionLoss)}
 # User
-- The user's name is "${nickname}". Call them by this name naturally.
+${userSection}
 
 # Current relationship
 ${stageLabel(stageIndex(affection))} (affection ${affection}/${MAX_AFFECTION}). Treat ${nickname} according to this stage.

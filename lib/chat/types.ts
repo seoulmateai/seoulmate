@@ -61,3 +61,20 @@ export type ChatApiResponse =
         | "SERVER_ERROR";
       wallet?: RubyWallet;
     };
+
+/**
+ * POST /api/chat/guest 응답 (로그인 전 체험 1턴). messages = [사용자 메시지, AI 답장] (id는 음수)
+ * LOGIN_REQUIRED = 이 캐릭터와 이미 체험 턴을 썼음, GUEST_LIMIT = 이 IP의 오늘 체험 횟수를 다 씀
+ */
+export type GuestChatApiResponse =
+  | { ok: true; messages: ChatMessage[] }
+  | {
+      ok: false;
+      error:
+        | "INVALID_REQUEST"
+        | "LOGIN_REQUIRED"
+        | "GUEST_LIMIT"
+        | "BLOCKED"
+        | "LLM_FAILED"
+        | "SERVER_ERROR";
+    };

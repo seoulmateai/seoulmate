@@ -13,6 +13,9 @@ const AUTH_PATHS = ["/login"];
 const matches = (pathname: string, paths: string[]) =>
   paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
+// 보호 경로 중 로그아웃 상태로도 열리는 곳: 채팅방(/chats/[characterId])은 로그인 전 체험 대화가 가능
+const isGuestChatRoom = (pathname: string) => /^\/chats\/[^/]+\/?$/.test(pathname);
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -42,7 +45,7 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname, search } = request.nextUrl;
 
-  if (!isLoggedIn && matches(pathname, PROTECTED_PATHS)) {
+  if (!isLoggedIn && matches(pathname, PROTECTED_PATHS) && !isGuestChatRoom(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = `?next=${encodeURIComponent(pathname + search)}`;

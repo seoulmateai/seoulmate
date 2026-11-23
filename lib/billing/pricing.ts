@@ -9,7 +9,7 @@
 export const POINTS_PER_RUBY = 5000;
 export const WON_PER_RUBY = 100;
 /** 하루 무료 루비 기본값 (env FREE_DAILY_RUBIES로 변경) */
-export const DEFAULT_FREE_DAILY_RUBIES = 10;
+export const DEFAULT_FREE_DAILY_RUBIES = 15;
 
 /** 루비 잔액. free = 오늘 남은 무료 루비, paid = 충전한 루비, pendingPoints = 다음 1루비까지 쌓인 점수 */
 export type RubyWallet = { free: number; paid: number; pendingPoints: number };

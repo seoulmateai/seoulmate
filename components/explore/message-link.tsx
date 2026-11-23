@@ -1,4 +1,5 @@
-import { AuthGatedLink } from "@/components/auth/auth-gated-link";
+import Link from "next/link";
+
 import { cn } from "@/lib/utils";
 
 export function MessageLink({
@@ -9,7 +10,7 @@ export function MessageLink({
   className?: string;
 }) {
   return (
-    <AuthGatedLink
+    <Link
       href={`/chats/${characterId}`}
       className={cn(
         "inline-flex h-9 items-center justify-center rounded-lg bg-coral px-5 text-sm font-bold text-white transition-colors hover:bg-coral-dark",
@@ -17,6 +18,6 @@ export function MessageLink({
       )}
     >
       Message
-    </AuthGatedLink>
+    </Link>
   );
 }

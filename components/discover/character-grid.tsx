@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
-import { AuthGatedLink } from "@/components/auth/auth-gated-link";
 import type { CharacterAvatar, CharacterBadge } from "@/lib/characters/types";
 import { cn } from "@/lib/utils";
 
@@ -106,13 +105,13 @@ export function CharacterGrid({ characters }: { characters: CharacterCard[] }) {
                   </p>
                 </div>
               </Link>
-              <AuthGatedLink
+              <Link
                 href={`/chats/${character.id}`}
                 className="btn-gradient absolute inset-x-3.5 bottom-3.5 z-10 inline-flex h-9 items-center justify-center gap-1 rounded-full text-xs font-bold transition-[filter] hover:brightness-110 md:inset-x-4 md:bottom-4 md:h-10 md:text-sm"
               >
                 Chat now
                 <ArrowRight className="size-3.5" aria-hidden />
-              </AuthGatedLink>
+              </Link>
             </li>
           ))}
         </ul>

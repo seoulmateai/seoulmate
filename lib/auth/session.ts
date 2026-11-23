@@ -25,6 +25,14 @@ const getSession = cache(async () => {
 });
 
 /**
+ * 현재 세션 (리다이렉트 없음). 로그아웃 상태면 null, 온보딩 전이면 profile이 null.
+ * cookies를 읽으므로 Suspense 안의 컴포넌트에서 호출할 것.
+ */
+export async function getCurrentSession() {
+  return getSession();
+}
+
+/**
  * 로그인 + 온보딩 완료 사용자만 통과. 아니면 /login 또는 /onboarding으로 보낸다.
  * cookies를 읽으므로 Suspense 안의 컴포넌트에서 호출할 것.
  */

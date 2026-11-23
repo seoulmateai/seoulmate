@@ -101,6 +101,26 @@ export async function getCharactersByIds(ids: string[]): Promise<Map<string, Cha
   return new Map(list.flatMap((c) => (c ? [[c.id, c] as const] : [])));
 }
 
+/** 첫 만남 메시지 (messages.content 형식). 로그인 전 게스트 채팅방에 보여줄 때만 사용. 미입력이면 null */
+export async function getFirstMeeting(id: string): Promise<string | null> {
+  if (!isCharacterId(id)) return null;
+  return getFirstMeetingCached(id.toLowerCase());
+}
+
+async function getFirstMeetingCached(id: string): Promise<string | null> {
+  "use cache";
+  cacheLife("days");
+  cacheTag(CHARACTERS_TAG);
+
+  const { data, error } = await createAdminClient()
+    .from("characters")
+    .select("first_meeting")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.first_meeting?.trim() || null;
+}
+
 /** 시스템 프롬프트 조립용. /api/chat 전용 — 반환값을 클라이언트로 넘기지 말 것 */
 export async function getCharacterPersona(id: string): Promise<CharacterPersona | null> {
   if (!isCharacterId(id)) return null;

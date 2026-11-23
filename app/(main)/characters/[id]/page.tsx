@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AuthGatedLink } from "@/components/auth/auth-gated-link";
 import { getCharacter, getCharacters } from "@/lib/characters";
 
 // 빌드 시점의 캐릭터만 미리 렌더링. 이후 추가된 캐릭터는 첫 요청 때 렌더링
@@ -80,12 +79,12 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
             <p className="text-[15px] leading-relaxed text-foreground/85">{character.intro}</p>
           </section>
 
-          <AuthGatedLink
+          <Link
             href={`/chats/${character.id}`}
             className="btn-gradient flex h-13 items-center justify-center rounded-full text-base font-bold transition-[filter] hover:brightness-110 md:self-start md:px-12"
           >
             Start chat
-          </AuthGatedLink>
+          </Link>
         </div>
       </div>
     </div>

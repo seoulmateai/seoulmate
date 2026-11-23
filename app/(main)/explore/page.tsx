@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { AuthGatedLink } from "@/components/auth/auth-gated-link";
 import { CharacterStrip } from "@/components/explore/character-strip";
 import { FeedPostCard } from "@/components/explore/feed-post";
 import { getCharacters } from "@/lib/characters";
@@ -92,12 +91,12 @@ export default async function ExplorePage() {
                 <p className="truncate text-sm font-semibold">{character.name}</p>
                 <p className="truncate text-xs text-muted-foreground">{character.occupation}</p>
               </div>
-              <AuthGatedLink
+              <Link
                 href={`/chats/${character.id}`}
                 className="btn-gradient inline-flex h-7 items-center rounded-full px-3 text-[11px] font-bold"
               >
                 Chat
-              </AuthGatedLink>
+              </Link>
             </li>
           ))}
         </ul>

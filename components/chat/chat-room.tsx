@@ -16,8 +16,10 @@ import {
   type ChatApiResponse,
   type ChatCharacter,
   type ChatMessage,
+  type GuestChatApiResponse,
 } from "@/lib/chat/types";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/components/auth/auth-provider";
 
 import { AffectionBar } from "./affection-bar";
 import { ChatProfile } from "./chat-profile";
@@ -59,8 +61,10 @@ export function ChatRoom({
   initialWallet,
   initialRelationship,
   scenesUnlocked = 0,
+  guest = false,
 }: {
-  roomId: number;
+  /** 게스트는 채팅방이 없음 (null) */
+  roomId: number | null;
   character: ChatCharacter;
   initialMessages: ChatMessage[];
   initialHasMore: boolean;
@@ -68,8 +72,14 @@ export function ChatRoom({
   initialRelationship: RelationshipView;
   /** 이 방에서 해금된 에피소드 단계. 오른쪽 프로필에만 쓴다 */
   scenesUnlocked?: number;
+  /**
+   * 로그인 전 체험 모드: 첫 만남 메시지에 답장 1번 → AI 답장까지. 다음 전송은 로그인 모달.
+   * 루비·호감도·에피소드·사진 첨부는 숨긴다 (POST /api/chat/guest)
+   */
+  guest?: boolean;
 }) {
   const router = useRouter();
+  const { openLogin } = useAuth();
   const [messages, setMessages] = useState(initialMessages);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -96,6 +106,9 @@ export function ChatRoom({
 
   const sending = outbox.some((m) => m.status === "sending") || episodeStarting;
   const rubies = wallet.free + wallet.paid;
+  // 게스트가 체험 턴을 이미 썼으면 다음 전송은 로그인부터
+  const guestTurnUsed = guest && messages.some((m) => m.role === "USER");
+  const loginNext = `/chats/${character.id}`;
 
   // ?ㅽ겕濡??꾩튂: ?댁쟾 硫붿떆吏 濡쒕뱶 ???꾩튂 ?좎? / 洹???泥?吏꾩엯, ??硫붿떆吏) ??留??꾨옒
   useLayoutEffect(() => {
@@ -144,7 +157,7 @@ export function ChatRoom({
   const loadOlder = useCallback(async () => {
     const el = scrollRef.current;
     const oldest = messages[0];
-    if (!el || !oldest || !hasMore || loadingOlder) return;
+    if (!el || !oldest || !hasMore || loadingOlder || roomId == null) return;
 
     setLoadingOlder(true);
     const { data, error } = await createClient()
@@ -176,16 +189,21 @@ export function ChatRoom({
     return () => observer.disconnect();
   }, [hasMore, loadOlder]);
 
-  /** 답장 성공 공통 처리: 메시지 추가 + 답장 공개 애니메이션 + 루비·호감도 갱신 */
-  function showReply(body: Extract<ChatApiResponse, { ok: true }>) {
-    setMessages((prev) => [...prev, ...body.messages]);
-    const reply = [...body.messages].reverse().find((m) => m.role === "ASSISTANT");
+  /** 메시지 추가 + 답장 공개 애니메이션 */
+  function appendReply(added: ChatMessage[]) {
+    setMessages((prev) => [...prev, ...added]);
+    const reply = [...added].reverse().find((m) => m.role === "ASSISTANT");
     const parts = reply ? parseMessageContent(reply.content) : [];
     setReveal(
       reply && parts.length > 0 && canAnimate()
         ? { messageId: reply.id, parts, step: 0, chars: 0 }
         : null,
     );
+  }
+
+  /** 답장 성공 공통 처리: 메시지·답장 공개 + 루비·호감도 갱신 */
+  function showReply(body: Extract<ChatApiResponse, { ok: true }>) {
+    appendReply(body.messages);
     setWallet(body.wallet);
     setRelationship(body.relationship);
     setEpisodeError(null);
@@ -243,7 +261,54 @@ export function ChatRoom({
     }
   }
 
+  /** 보내지 못한 내용을 입력창으로 되돌린다 (루비 부족·로그인 필요) */
+  function restoreDraft(localId: string, content: string, image?: PreparedImage) {
+    setOutbox((prev) => prev.filter((m) => m.localId !== localId));
+    setDraft((d) => d || content);
+    if (image) {
+      setAttachment((a) => {
+        if (!a) return image;
+        URL.revokeObjectURL(image.previewUrl);
+        return a;
+      });
+    }
+  }
+
+  /** 게스트 체험 턴 (텍스트만). 저장은 서버의 guest_turns, 로그인 후 채팅방으로 옮겨진다 */
+  async function deliverGuest(localId: string, content: string) {
+    let body: GuestChatApiResponse | null = null;
+    try {
+      const res = await fetch("/api/chat/guest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ characterId: character.id, content }),
+      });
+      body = await res.json().catch(() => null);
+    } catch {
+      body = null;
+    }
+
+    if (body?.ok) {
+      setOutbox((prev) => prev.filter((m) => m.localId !== localId));
+      appendReply(body.messages);
+      return;
+    }
+    if (body?.error === "LOGIN_REQUIRED" || body?.error === "GUEST_LIMIT") {
+      restoreDraft(localId, content);
+      openLogin(loginNext);
+      return;
+    }
+    setOutbox((prev) =>
+      prev.map((m) =>
+        m.localId === localId
+          ? { ...m, status: "failed", error: ERROR_TEXT[body?.error ?? ""] ?? "Message failed to send." }
+          : m,
+      ),
+    );
+  }
+
   async function deliver(localId: string, content: string, image?: PreparedImage) {
+    if (guest) return deliverGuest(localId, content);
     let res: Response;
     let body: ChatApiResponse | null = null;
     try {
@@ -270,15 +335,7 @@ export function ChatRoom({
     switch (body?.error) {
       case "INSUFFICIENT_RUBY":
         // ?꾩넚?섏? ?딆? ?댁슜? ?낅젰李쎌쑝濡??섎룎由?
-        setOutbox((prev) => prev.filter((m) => m.localId !== localId));
-        setDraft((d) => d || content);
-        if (image) {
-          setAttachment((a) => {
-            if (!a) return image;
-            URL.revokeObjectURL(image.previewUrl);
-            return a;
-          });
-        }
+        restoreDraft(localId, content, image);
         setLimitOpen(true);
         return;
       case "UNAUTHENTICATED":
@@ -328,7 +385,12 @@ export function ChatRoom({
     const content = draft.trim();
     const image = attachment ?? undefined;
     if ((!content && !image) || sending || imageState === "preparing") return;
-    if (rubies < 1) {
+    if (guest && (guestTurnUsed || outbox.length > 0)) {
+      // 체험은 한 턴까지. 입력한 내용은 그대로 두고 로그인 → 같은 채팅방으로 돌아와 이어서 보낸다
+      openLogin(loginNext);
+      return;
+    }
+    if (!guest && rubies < 1) {
       setLimitOpen(true);
       return;
     }
@@ -388,6 +450,7 @@ export function ChatRoom({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {!guest && (
           <span
             className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-2.5 py-1.5 text-[11px] font-bold text-white"
             title={`Free today: ${wallet.free} · Purchased: ${wallet.paid}`}
@@ -396,6 +459,7 @@ export function ChatRoom({
             <Gem className="size-3.5" aria-hidden />
             {rubies}
           </span>
+          )}
           <Link
             href={`/characters/${character.id}`}
             aria-label={`${character.name}'s profile`}
@@ -408,13 +472,15 @@ export function ChatRoom({
       </header>
 
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <AffectionBar
-          relationship={relationship}
-          starting={episodeStarting}
-          disabled={sending || revealing}
-          error={episodeError}
-          onStartEpisode={startEpisode}
-        />
+        {!guest && (
+          <AffectionBar
+            relationship={relationship}
+            starting={episodeStarting}
+            disabled={sending || revealing}
+            error={episodeError}
+            onStartEpisode={startEpisode}
+          />
+        )}
 
         {/* pt-14: 위에 떠 있는 호감도 칩에 첫 메시지가 가려지지 않게 */}
         <div
@@ -455,7 +521,12 @@ export function ChatRoom({
         imageError={imageError}
         onPickImage={pickImage}
         onRemoveImage={removeImage}
-        placeholder={`Message ${character.name}...`}
+        allowImage={!guest}
+        placeholder={
+          guestTurnUsed
+            ? `Log in to keep talking with ${character.name}...`
+            : `Message ${character.name}...`
+        }
       />
 
       <LimitDialog open={limitOpen} onOpenChange={setLimitOpen} />
