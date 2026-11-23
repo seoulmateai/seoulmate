@@ -1,6 +1,7 @@
 import { ChevronRight, FileText, Gem, Lock, Mail, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { cache, Suspense } from "react";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -39,7 +40,9 @@ const LINKS = [
   },
 ];
 
-export default async function SettingsPage() {
+// 프로필·내 캐릭터·플랜 섹션이 같은 데이터를 쓰므로 한 요청에서 한 번만 조회.
+// cookies를 읽으므로 반드시 Suspense 안의 컴포넌트에서 호출할 것 (cacheComponents)
+const getSettingsData = cache(async () => {
   const { user, profile, supabase } = await requireOnboardedUser("/settings");
   const [{ data: rooms }, characters] = await Promise.all([
     supabase
@@ -71,6 +74,10 @@ export default async function SettingsPage() {
   const rubyPercent =
     freeLeft != null && daily > 0 ? Math.min(100, Math.round((freeLeft / daily) * 100)) : null;
 
+  return { user, profile, seoulmates, unlocked, sceneTotal, favorite, freeLeft, rubyPercent };
+});
+
+export default function SettingsPage() {
   return (
     <div className="page-container flex flex-1 flex-col pt-8 pb-8 md:pt-12">
       <section className="mb-6">
@@ -80,6 +87,77 @@ export default async function SettingsPage() {
         </h1>
       </section>
 
+      <Suspense
+        fallback={
+          <>
+            <div className="mb-4 h-[132px] animate-pulse rounded-[24px] bg-white/5" />
+            <div className="mb-4 grid grid-cols-3 gap-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-[76px] animate-pulse rounded-[18px] bg-white/5" />
+              ))}
+            </div>
+          </>
+        }
+      >
+        <ProfileSection />
+      </Suspense>
+
+      <div className="grid items-start gap-4 min-[850px]:grid-cols-[minmax(0,1.45fr)_minmax(260px,0.8fr)]">
+        <div className="order-2 flex flex-col gap-4 min-[850px]:order-1">
+          <Suspense fallback={<div className="h-[150px] animate-pulse rounded-[22px] bg-white/5" />}>
+            <SeoulmatesSection />
+          </Suspense>
+
+          <nav aria-label="Information and support" className="overflow-hidden rounded-[22px] border border-white/10 bg-card">
+            <ul className="divide-y divide-white/8">
+              {LINKS.map(({ href, label, description, icon: Icon }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className="flex min-h-[68px] items-center gap-3 px-4 transition-colors hover:bg-white/4 md:px-5"
+                  >
+                    <Icon className="size-4 shrink-0 text-coral" aria-hidden />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold">{label}</span>
+                      <small className="mt-0.5 block text-[11px] text-muted-foreground">{description}</small>
+                    </span>
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+
+        <div className="order-1 flex flex-col gap-4 min-[850px]:order-2">
+          <Suspense fallback={<div className="h-[160px] animate-pulse rounded-[22px] bg-white/5" />}>
+            <PlanSection />
+          </Suspense>
+
+          <section className="rounded-[22px] border border-white/10 bg-card p-5">
+            <h2 className="mb-2 text-[15px] font-bold">Account actions</h2>
+            <p className="mb-5 text-xs leading-relaxed text-muted-foreground">
+              Sign out of your account or permanently remove it.
+            </p>
+            <SignOutButton />
+            <DeleteAccountButton />
+            <p className="mt-5 text-[11px] leading-relaxed text-muted-foreground">
+              Deleting is permanent. Your profile and chat history will be removed.
+            </p>
+          </section>
+        </div>
+      </div>
+
+      <SiteFooter className="mt-12" />
+    </div>
+  );
+}
+
+async function ProfileSection() {
+  const { user, profile, unlocked, sceneTotal, favorite, freeLeft } = await getSettingsData();
+
+  return (
+    <>
       <section className="mb-4 flex flex-col gap-4 rounded-[24px] border border-white/10 bg-[linear-gradient(110deg,#2a1228_0%,#120c18_55%,#1a1030_100%)] px-4 py-5 sm:flex-row sm:items-center md:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-4">
           <div className="story-ring grid size-16 shrink-0 place-items-center rounded-full p-0.5">
@@ -109,113 +187,85 @@ export default async function SettingsPage() {
         <Stat label="Your favorite" value={favorite} />
         <Stat label="Rubies today" value={freeLeft == null ? "—" : String(freeLeft)} />
       </dl>
+    </>
+  );
+}
 
-      <div className="grid items-start gap-4 min-[850px]:grid-cols-[minmax(0,1.45fr)_minmax(260px,0.8fr)]">
-        <div className="order-2 flex flex-col gap-4 min-[850px]:order-1">
-          <section className="rounded-[22px] border border-white/10 bg-card p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-bold">My Seoulmates</h2>
-              <Link href="/chats" className="text-xs font-semibold text-coral">
-                See all →
-              </Link>
-            </div>
-            {seoulmates.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No conversations yet.{" "}
-                <Link href="/#characters" className="font-semibold text-coral">
-                  Pick someone
-                </Link>
-              </p>
-            ) : (
-              <ul className="flex gap-4 overflow-x-auto">
-                {seoulmates.map((mate) => (
-                  <li key={mate.id} className="w-16 shrink-0">
-                    <Link href={`/chats/${mate.id}`} className="flex flex-col items-center gap-1.5">
-                      <span className="story-ring rounded-full p-[2px]">
-                        <span className="relative block size-14 overflow-hidden rounded-full bg-muted">
-                          <Image
-                            src={mate.avatar.src}
-                            alt=""
-                            fill
-                            placeholder={mate.avatar.blurDataURL ? "blur" : "empty"}
-                            blurDataURL={mate.avatar.blurDataURL ?? undefined}
-                            sizes="56px"
-                            className="object-cover object-top"
-                          />
-                        </span>
-                      </span>
-                      <span className="w-full truncate text-center text-[11px]">{mate.name}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+async function SeoulmatesSection() {
+  const { seoulmates } = await getSettingsData();
 
-          <nav aria-label="Information and support" className="overflow-hidden rounded-[22px] border border-white/10 bg-card">
-            <ul className="divide-y divide-white/8">
-              {LINKS.map(({ href, label, description, icon: Icon }) => (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    className="flex min-h-[68px] items-center gap-3 px-4 transition-colors hover:bg-white/4 md:px-5"
-                  >
-                    <Icon className="size-4 shrink-0 text-coral" aria-hidden />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold">{label}</span>
-                      <small className="mt-0.5 block text-[11px] text-muted-foreground">{description}</small>
-                    </span>
-                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </div>
-
-        <div className="order-1 flex flex-col gap-4 min-[850px]:order-2">
-          <section className="rounded-[22px] border border-white/10 bg-card p-5">
-            <h2 className="mb-2 text-base font-bold">Your plan</h2>
-            <p className="text-xs text-muted-foreground">
-              Free plan
-              {rubyPercent != null ? ` · ${rubyPercent}% of today's rubies left` : ""}
-            </p>
-            {rubyPercent != null && (
-              <div className="mt-3">
-                <div
-                  role="meter"
-                  aria-label="Free rubies left today"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={rubyPercent}
-                  className="h-2 overflow-hidden rounded-full bg-white/10"
-                >
-                  <div className="btn-gradient h-full rounded-full" style={{ width: `${rubyPercent}%` }} />
-                </div>
-                <p className="mt-2 text-right text-xs font-semibold text-white/70">{rubyPercent}%</p>
-              </div>
-            )}
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Rubies refill on the free plan. Paid plans are preview-only for now.
-            </p>
-          </section>
-
-          <section className="rounded-[22px] border border-white/10 bg-card p-5">
-            <h2 className="mb-2 text-[15px] font-bold">Account actions</h2>
-            <p className="mb-5 text-xs leading-relaxed text-muted-foreground">
-              Sign out of your account or permanently remove it.
-            </p>
-            <SignOutButton />
-            <DeleteAccountButton />
-            <p className="mt-5 text-[11px] leading-relaxed text-muted-foreground">
-              Deleting is permanent. Your profile and chat history will be removed.
-            </p>
-          </section>
-        </div>
+  return (
+    <section className="rounded-[22px] border border-white/10 bg-card p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-base font-bold">My Seoulmates</h2>
+        <Link href="/chats" className="text-xs font-semibold text-coral">
+          See all →
+        </Link>
       </div>
+      {seoulmates.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No conversations yet.{" "}
+          <Link href="/#characters" className="font-semibold text-coral">
+            Pick someone
+          </Link>
+        </p>
+      ) : (
+        <ul className="flex gap-4 overflow-x-auto">
+          {seoulmates.map((mate) => (
+            <li key={mate.id} className="w-16 shrink-0">
+              <Link href={`/chats/${mate.id}`} className="flex flex-col items-center gap-1.5">
+                <span className="story-ring rounded-full p-[2px]">
+                  <span className="relative block size-14 overflow-hidden rounded-full bg-muted">
+                    <Image
+                      src={mate.avatar.src}
+                      alt=""
+                      fill
+                      placeholder={mate.avatar.blurDataURL ? "blur" : "empty"}
+                      blurDataURL={mate.avatar.blurDataURL ?? undefined}
+                      sizes="56px"
+                      className="object-cover object-top"
+                    />
+                  </span>
+                </span>
+                <span className="w-full truncate text-center text-[11px]">{mate.name}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
-      <SiteFooter className="mt-12" />
-    </div>
+async function PlanSection() {
+  const { rubyPercent } = await getSettingsData();
+
+  return (
+    <section className="rounded-[22px] border border-white/10 bg-card p-5">
+      <h2 className="mb-2 text-base font-bold">Your plan</h2>
+      <p className="text-xs text-muted-foreground">
+        Free plan
+        {rubyPercent != null ? ` · ${rubyPercent}% of today's rubies left` : ""}
+      </p>
+      {rubyPercent != null && (
+        <div className="mt-3">
+          <div
+            role="meter"
+            aria-label="Free rubies left today"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={rubyPercent}
+            className="h-2 overflow-hidden rounded-full bg-white/10"
+          >
+            <div className="btn-gradient h-full rounded-full" style={{ width: `${rubyPercent}%` }} />
+          </div>
+          <p className="mt-2 text-right text-xs font-semibold text-white/70">{rubyPercent}%</p>
+        </div>
+      )}
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+        Rubies refill on the free plan. Paid plans are preview-only for now.
+      </p>
+    </section>
   );
 }
 
