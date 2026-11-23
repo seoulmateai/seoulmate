@@ -1,5 +1,6 @@
 import { CharacterGrid, type CharacterCard } from "@/components/discover/character-grid";
-import { ClosingBanner, HomeHero, SceneRow, TonightStories } from "@/components/home/landing";
+import { HomeHero } from "@/components/home/hero-carousel";
+import { ClosingBanner, SceneRow, TonightStories } from "@/components/home/landing";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { getCharacters } from "@/lib/characters";
 
@@ -14,11 +15,9 @@ export default async function HomePage() {
     badge,
     avatar,
   }));
-  const featured = cards.find((character) => character.badge === "popular") ?? cards[0] ?? null;
-
   return (
     <div className="flex flex-col pb-8">
-      <HomeHero featured={featured} count={cards.length} />
+      <HomeHero characters={cards} />
       <TonightStories characters={cards} />
       <div className="page-container pt-4 pb-8">
         <CharacterGrid characters={cards} />
