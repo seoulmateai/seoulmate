@@ -106,7 +106,7 @@ export function ChatInput({
           {imageError && <p className="text-xs text-destructive">{imageError}</p>}
         </div>
       )}
-      <div className="flex items-end gap-1.5 rounded-full border border-white/12 bg-[#141218] py-1.5 pr-1.5 pl-1.5 focus-within:border-coral/50">
+      <div className="flex items-end gap-1.5 rounded-[26px] border border-white/12 bg-[#141218] py-1.5 pr-1.5 pl-1.5 focus-within:border-coral/50">
         <input
           ref={fileRef}
           type="file"
@@ -124,7 +124,7 @@ export function ChatInput({
           aria-label="Attach photo"
           title="Attach photo"
           disabled={sending || preparing}
-          className="grid size-[43px] shrink-0 place-items-center rounded-[13px] text-muted-foreground hover:text-coral disabled:opacity-50"
+          className="grid size-10 shrink-0 place-items-center rounded-full text-muted-foreground hover:text-coral disabled:opacity-50"
           onClick={() => (onAttachBlocked ? onAttachBlocked() : fileRef.current?.click())}
         >
           <ImagePlus className="size-5" />
@@ -136,7 +136,7 @@ export function ChatInput({
           maxLength={MAX_INPUT_LENGTH}
           placeholder={placeholder}
           aria-label="Message"
-          className="min-h-[43px] flex-1 resize-none bg-transparent py-2.5 text-[13px] leading-6 text-foreground outline-none placeholder:text-muted-foreground"
+          className="min-h-10 min-w-0 flex-1 resize-none bg-transparent py-2 text-[13px] leading-6 text-foreground outline-none placeholder:text-muted-foreground"
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
             // Enter 전송, Shift+Enter 줄바꿈. 한글 조합 중 Enter는 무시

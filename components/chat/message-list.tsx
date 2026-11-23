@@ -231,7 +231,7 @@ function RichText({ kind, text }: { kind: ContentKind; text: string }) {
 }
 
 const NARRATION_CLASS =
-  "px-1 text-[13px] leading-[1.75] break-words whitespace-pre-wrap text-muted-foreground italic";
+  "px-1 text-[13px] leading-[1.75] wrap-anywhere whitespace-pre-wrap text-muted-foreground italic";
 
 function AssistantRow({
   character,
@@ -280,7 +280,7 @@ function AssistantRow({
       <div className="flex min-w-0 flex-1 items-end gap-2">
         <div
           className={cn(
-            "max-w-[min(78%,560px)] rounded-[18px] border border-white/8 bg-bubble-ai px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap text-foreground max-md:max-w-[86%] max-md:px-3.5 max-md:py-2.5",
+            "max-w-[min(78%,560px)] rounded-[18px] border border-white/8 bg-bubble-ai px-4 py-3 text-[13px] leading-[1.65] wrap-anywhere whitespace-pre-wrap text-foreground max-md:max-w-[86%] max-md:px-3.5 max-md:py-2.5",
             showProfile && "rounded-tl-[5px]",
           )}
         >
@@ -341,9 +341,9 @@ function UserRow({
           {image && <PhotoBubble image={image} />}
           {children &&
             (kind === "NARRATION" ? (
-              <p className={cn(NARRATION_CLASS, "text-right")}>{children}</p>
+              <p className={cn(NARRATION_CLASS, "max-w-full text-right")}>{children}</p>
             ) : (
-              <div className="btn-gradient rounded-[18px] rounded-br-[6px] px-4 py-3 text-[13px] leading-[1.65] break-words whitespace-pre-wrap max-md:px-3.5 max-md:py-2.5">
+              <div className="btn-gradient max-w-full rounded-[18px] rounded-br-[6px] px-4 py-3 text-[13px] leading-[1.65] wrap-anywhere whitespace-pre-wrap max-md:px-3.5 max-md:py-2.5">
                 {children}
               </div>
             ))}
