@@ -521,7 +521,8 @@ export function ChatRoom({
         imageError={imageError}
         onPickImage={pickImage}
         onRemoveImage={removeImage}
-        allowImage={!guest}
+        // 게스트는 사진 전송 불가: 버튼은 보여주되 누르면 로그인 모달
+        onAttachBlocked={guest ? () => openLogin(loginNext) : undefined}
         placeholder={
           guestTurnUsed
             ? `Log in to keep talking with ${character.name}...`

@@ -20,7 +20,7 @@ export function ChatInput({
   imageError,
   onPickImage,
   onRemoveImage,
-  allowImage = true,
+  onAttachBlocked,
   placeholder = "Write a message...",
 }: {
   value: string;
@@ -33,8 +33,8 @@ export function ChatInput({
   imageError: string | null;
   onPickImage: (file: File) => void;
   onRemoveImage: () => void;
-  /** false면 사진 첨부 버튼을 숨긴다 (로그인 전 체험) */
-  allowImage?: boolean;
+  /** 있으면 사진 버튼이 파일 선택 대신 이 함수를 부른다 (로그인 전 체험 → 로그인 모달) */
+  onAttachBlocked?: () => void;
   placeholder?: string;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -107,32 +107,28 @@ export function ChatInput({
         </div>
       )}
       <div className="flex items-end gap-1.5 rounded-full border border-white/12 bg-[#141218] py-1.5 pr-1.5 pl-1.5 focus-within:border-coral/50">
-        {allowImage && (
-          <>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                // 같은 파일을 다시 고를 수 있게 비움
-                e.target.value = "";
-                if (file) onPickImage(file);
-              }}
-            />
-            <button
-              type="button"
-              aria-label="Attach photo"
-              title="Attach photo"
-              disabled={sending || preparing}
-              className="grid size-[43px] shrink-0 place-items-center rounded-[13px] text-muted-foreground hover:text-coral disabled:opacity-50"
-              onClick={() => fileRef.current?.click()}
-            >
-              <ImagePlus className="size-5" />
-            </button>
-          </>
-        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            // 같은 파일을 다시 고를 수 있게 비움
+            e.target.value = "";
+            if (file) onPickImage(file);
+          }}
+        />
+        <button
+          type="button"
+          aria-label="Attach photo"
+          title="Attach photo"
+          disabled={sending || preparing}
+          className="grid size-[43px] shrink-0 place-items-center rounded-[13px] text-muted-foreground hover:text-coral disabled:opacity-50"
+          onClick={() => (onAttachBlocked ? onAttachBlocked() : fileRef.current?.click())}
+        >
+          <ImagePlus className="size-5" />
+        </button>
         <textarea
           ref={ref}
           rows={1}
