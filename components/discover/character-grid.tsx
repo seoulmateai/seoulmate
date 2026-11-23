@@ -16,6 +16,7 @@ export type CharacterCard = {
   bio: string;
   badge: CharacterBadge;
   avatar: CharacterAvatar;
+  chatEnabled: boolean;
 };
 
 type Filter = "all" | CharacterBadge;
@@ -105,13 +106,22 @@ export function CharacterGrid({ characters }: { characters: CharacterCard[] }) {
                   </p>
                 </div>
               </Link>
-              <Link
-                href={`/chats/${character.id}`}
-                className="btn-gradient absolute inset-x-3 bottom-3 z-10 inline-flex h-8 items-center justify-center gap-1 rounded-full text-[11px] font-bold transition-[filter] hover:brightness-110 md:inset-x-4 md:bottom-4 md:h-10 md:text-sm"
-              >
-                Chat now
-                <ArrowRight className="size-3.5" aria-hidden />
-              </Link>
+              {character.chatEnabled ? (
+                <Link
+                  href={`/chats/${character.id}`}
+                  className="btn-gradient absolute inset-x-3 bottom-3 z-10 inline-flex h-8 items-center justify-center gap-1 rounded-full text-[11px] font-bold transition-[filter] hover:brightness-110 md:inset-x-4 md:bottom-4 md:h-10 md:text-sm"
+                >
+                  Chat now
+                  <ArrowRight className="size-3.5" aria-hidden />
+                </Link>
+              ) : (
+                <span
+                  aria-disabled
+                  className="absolute inset-x-3 bottom-3 z-10 inline-flex h-8 cursor-not-allowed items-center justify-center rounded-full border border-white/20 bg-black/50 text-[11px] font-bold text-white/60 backdrop-blur md:inset-x-4 md:bottom-4 md:h-10 md:text-sm"
+                >
+                  Coming soon
+                </span>
+              )}
             </li>
           ))}
         </ul>

@@ -61,7 +61,7 @@ export default async function ExploreProfilePage({
             <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">
               {character.name}
             </h1>
-            <MessageLink characterId={character.id} />
+            <MessageLink characterId={character.id} chatEnabled={character.chatEnabled} />
             <p className="text-sm">
               <span className="font-bold">{posts.length}</span>{" "}
               <span className="text-muted-foreground">posts</span>

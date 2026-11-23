@@ -15,7 +15,7 @@ export type { Character, CharacterBadge, CharacterPersona } from "./types";
 export const CHARACTERS_TAG = "characters";
 
 const PUBLIC_COLUMNS =
-  "id, name, age, occupation, bio, intro, keywords, badge, avatar_path, blur_data_url, is_active";
+  "id, name, age, occupation, bio, intro, keywords, badge, avatar_path, blur_data_url, is_active, chat_enabled";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -36,6 +36,7 @@ type PublicRow = {
   avatar_path: string;
   blur_data_url: string | null;
   is_active: boolean;
+  chat_enabled: boolean;
 };
 
 function toCharacter(row: PublicRow): Character {
@@ -50,6 +51,7 @@ function toCharacter(row: PublicRow): Character {
     badge: row.badge as CharacterBadge,
     avatar: { src: avatarUrl(row.avatar_path), blurDataURL: row.blur_data_url },
     isActive: row.is_active,
+    chatEnabled: row.chat_enabled,
   };
 }
 
@@ -135,7 +137,7 @@ async function getCharacterPersonaCached(id: string): Promise<CharacterPersona |
   const { data, error } = await createAdminClient()
     .from("characters")
     .select(
-      "id, name, age, appearance, background, relationship, personality, speech_style, extra_rules, affection_triggers, affection_loss, episode_1, episode_2, episode_3, episode_4, episode_5, persona_version, is_active",
+      "id, name, age, appearance, background, relationship, personality, speech_style, extra_rules, affection_triggers, affection_loss, episode_1, episode_2, episode_3, episode_4, episode_5, persona_version, is_active, chat_enabled",
     )
     .eq("id", id)
     .maybeSingle();
@@ -156,5 +158,6 @@ async function getCharacterPersonaCached(id: string): Promise<CharacterPersona |
     episodes: [data.episode_1, data.episode_2, data.episode_3, data.episode_4, data.episode_5],
     personaVersion: data.persona_version,
     isActive: data.is_active,
+    chatEnabled: data.chat_enabled,
   };
 }

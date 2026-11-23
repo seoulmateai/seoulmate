@@ -6,15 +6,18 @@ import { getCharacters } from "@/lib/characters";
 
 export default async function HomePage() {
   const characters = await getCharacters();
-  const cards: CharacterCard[] = characters.map(({ id, name, age, occupation, bio, badge, avatar }) => ({
-    id,
-    name,
-    age,
-    occupation,
-    bio,
-    badge,
-    avatar,
-  }));
+  const cards: CharacterCard[] = characters.map(
+    ({ id, name, age, occupation, bio, badge, avatar, chatEnabled }) => ({
+      id,
+      name,
+      age,
+      occupation,
+      bio,
+      badge,
+      avatar,
+      chatEnabled,
+    }),
+  );
   return (
     <div className="flex flex-col pb-8">
       <HomeHero characters={cards} />

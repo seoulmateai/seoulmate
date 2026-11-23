@@ -47,7 +47,7 @@ const getSettingsData = cache(async () => {
   const [{ data: rooms }, characters] = await Promise.all([
     supabase
       .from("chat_rooms")
-      .select("character_id, unlocked_stage, last_message_at")
+      .select("character_id, unlocked_stage, affection, last_message_at")
       .order("last_message_at", { ascending: false, nullsFirst: false }),
     getCharacters(),
   ]);
@@ -61,7 +61,12 @@ const getSettingsData = cache(async () => {
   });
   const unlocked = (rooms ?? []).reduce((sum, room) => sum + room.unlocked_stage, 0);
   const sceneTotal = Math.max(characters.length, 1) * EPISODE_COUNT;
-  const favorite = seoulmates[0]?.name ?? "—";
+  // 호감도가 가장 높은 캐릭터. 같으면 최근에 대화한 쪽 (rooms가 최신순이라 먼저 나온 방을 유지)
+  const favoriteRoom = (rooms ?? []).reduce<(typeof rooms & {})[number] | null>(
+    (best, room) => (mates.has(room.character_id) && (!best || room.affection > best.affection) ? room : best),
+    null,
+  );
+  const favorite = (favoriteRoom && mates.get(favoriteRoom.character_id)?.name) ?? "—";
 
   let freeLeft: number | null = null;
   try {

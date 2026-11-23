@@ -77,7 +77,11 @@ export default async function ExplorePostPage({
                 </span>
                 <span className="truncate text-sm font-semibold">{character.name}</span>
               </Link>
-              <MessageLink characterId={character.id} className="shrink-0" />
+              <MessageLink
+                characterId={character.id}
+                chatEnabled={character.chatEnabled}
+                className="shrink-0"
+              />
             </div>
           </div>
         </div>

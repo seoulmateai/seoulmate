@@ -14,6 +14,7 @@ export function FeedPostCard({
     name: string;
     occupation: string;
     avatar: CharacterAvatar;
+    chatEnabled: boolean;
   };
 }) {
   return (
@@ -38,12 +39,21 @@ export function FeedPostCard({
             <span className="block truncate text-xs text-muted-foreground">{character.occupation}</span>
           </span>
         </Link>
-        <Link
-          href={`/chats/${character.id}`}
-          className="btn-gradient inline-flex h-8 shrink-0 items-center rounded-full px-4 text-xs font-bold transition-[filter] hover:brightness-110"
-        >
-          Chat
-        </Link>
+        {character.chatEnabled ? (
+          <Link
+            href={`/chats/${character.id}`}
+            className="btn-gradient inline-flex h-8 shrink-0 items-center rounded-full px-4 text-xs font-bold transition-[filter] hover:brightness-110"
+          >
+            Chat
+          </Link>
+        ) : (
+          <span
+            aria-disabled
+            className="inline-flex h-8 shrink-0 cursor-not-allowed items-center rounded-full border border-white/15 px-4 text-xs font-bold text-white/50"
+          >
+            Coming soon
+          </span>
+        )}
       </header>
 
       <Link
@@ -61,14 +71,20 @@ export function FeedPostCard({
           <span className="font-semibold">{character.name}</span>{" "}
           <span className="text-white/85">{post.caption}</span>
         </p>
-        <Link
-          href={`/chats/${character.id}`}
-          aria-label={`Open chat with ${character.name}`}
-          className="mt-4 flex items-center rounded-full border border-white/12 bg-black/40 p-1"
-        >
-          <span className="flex-1 px-3 text-sm text-muted-foreground">Reply to {character.name}...</span>
-          <span className="btn-gradient rounded-full px-4 py-2 text-xs font-bold">Send →</span>
-        </Link>
+        {character.chatEnabled ? (
+          <Link
+            href={`/chats/${character.id}`}
+            aria-label={`Open chat with ${character.name}`}
+            className="mt-4 flex items-center rounded-full border border-white/12 bg-black/40 p-1"
+          >
+            <span className="flex-1 px-3 text-sm text-muted-foreground">Reply to {character.name}...</span>
+            <span className="btn-gradient rounded-full px-4 py-2 text-xs font-bold">Send →</span>
+          </Link>
+        ) : (
+          <p className="mt-4 rounded-full border border-white/8 bg-black/20 px-4 py-2.5 text-sm text-muted-foreground/70">
+            Chat with {character.name} is coming soon
+          </p>
+        )}
       </div>
     </article>
   );

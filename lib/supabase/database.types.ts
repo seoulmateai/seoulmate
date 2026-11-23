@@ -25,6 +25,7 @@ export type Database = {
           badge: string
           bio: string
           blur_data_url: string | null
+          chat_enabled: boolean
           created_at: string
           episode_1: string | null
           episode_2: string | null
@@ -56,6 +57,7 @@ export type Database = {
           badge?: string
           bio: string
           blur_data_url?: string | null
+          chat_enabled?: boolean
           created_at?: string
           episode_1?: string | null
           episode_2?: string | null
@@ -87,6 +89,7 @@ export type Database = {
           badge?: string
           bio?: string
           blur_data_url?: string | null
+          chat_enabled?: boolean
           created_at?: string
           episode_1?: string | null
           episode_2?: string | null

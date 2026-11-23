@@ -23,6 +23,8 @@ export type Character = {
   keywords: string[];
   /** false = Discover·상세에서 숨김, 새 대화 불가. 기존 채팅방은 유지 */
   isActive: boolean;
+  /** false = 노출은 하되 "Coming soon"으로 새 대화 불가. 기존 채팅방은 유지 */
+  chatEnabled: boolean;
 };
 
 /** 시스템 프롬프트 조립용. 서버(/api/chat)에서만 사용 */
@@ -48,4 +50,5 @@ export type CharacterPersona = {
   /** 프롬프트 칼럼이 바뀌면 DB 트리거가 +1. llm_calls에 기록 */
   personaVersion: number;
   isActive: boolean;
+  chatEnabled: boolean;
 };

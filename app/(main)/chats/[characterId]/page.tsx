@@ -1,3 +1,5 @@
+import Image from "next/image";
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -5,7 +7,13 @@ import { Suspense } from "react";
 import { ChatRoom } from "@/components/chat/chat-room";
 import { getCurrentSession, requireOnboardedUser } from "@/lib/auth/session";
 import { toRelationshipView } from "@/lib/affection/stages";
-import { getCharacter, getCharacterPersona, getCharacters, getFirstMeeting } from "@/lib/characters";
+import {
+  getCharacter,
+  getCharacterPersona,
+  getCharacters,
+  getFirstMeeting,
+  type Character,
+} from "@/lib/characters";
 import { MESSAGE_PAGE_SIZE } from "@/lib/chat/constants";
 import { claimGuestTurn, getGuestTurn, guestCookieName, guestMessages } from "@/lib/chat/guest";
 import { getWallet } from "@/lib/billing/wallet";
@@ -23,6 +31,38 @@ export default function ChatRoomPage({ params }: PageProps<"/chats/[characterId]
     <Suspense fallback={<div className="flex-1 bg-chat" />}>
       <ChatRoomLoader params={params} />
     </Suspense>
+  );
+}
+
+/** 아직 설정 중인 캐릭터 (chat_enabled = false): 새 대화 대신 보여주는 화면 */
+function ComingSoon({ character }: { character: Character }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-5 bg-chat px-6 py-16 text-center">
+      <span className="relative block size-28 overflow-hidden rounded-full border border-coral/40 bg-muted">
+        <Image
+          src={character.avatar.src}
+          alt=""
+          fill
+          placeholder={character.avatar.blurDataURL ? "blur" : "empty"}
+          blurDataURL={character.avatar.blurDataURL ?? undefined}
+          sizes="112px"
+          className="object-cover object-top"
+        />
+      </span>
+      <div>
+        <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-coral uppercase">Coming soon</p>
+        <h1 className="text-2xl font-extrabold tracking-[-0.03em]">
+          {character.name} isn&apos;t ready to chat yet.
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">His story is almost here. Check back soon.</p>
+      </div>
+      <Link
+        href="/#characters"
+        className="btn-gradient inline-flex h-11 items-center rounded-full px-6 text-sm font-bold transition-[filter] hover:brightness-110"
+      >
+        Meet someone else
+      </Link>
+    </div>
   );
 }
 
@@ -47,6 +87,7 @@ async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">
   // 로그인 전: 체험 채팅방 (첫 만남 메시지 + 체험 턴 1개). 채팅방·메시지는 만들지 않는다
   if (!(await getCurrentSession())) {
     if (!character.isActive) notFound();
+    if (!character.chatEnabled) return <ComingSoon character={character} />;
     const admin = createAdminClient();
     const [firstMeeting, turn] = await Promise.all([
       getFirstMeeting(character.id),
@@ -76,6 +117,10 @@ async function ChatRoomLoader({ params }: Pick<PageProps<"/chats/[characterId]">
   const { supabase, user } = await requireOnboardedUser(`/chats/${character.id}`);
   // 대화 시작 = 채팅방 생성 → Chats 목록에 나타남 (비활성 캐릭터는 기존 방만)
   const roomId = await getOrCreateRoomId(user.id, character);
+  // Coming soon 캐릭터: 기존 방이 있으면 그대로 열고, 없으면 새 대화를 막는다
+  if (roomId == null && character.isActive && !character.chatEnabled) {
+    return <ComingSoon character={character} />;
+  }
   if (roomId == null) notFound();
 
   // 로그인 전에 나눈 체험 턴을 이 채팅방으로 옮긴다 (이미 옮겼거나 대화가 있으면 아무것도 안 함)

@@ -33,7 +33,7 @@ function json(body: GuestChatApiResponse, status: number) {
 export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   const character = parsed.success ? await getCharacterPersona(parsed.data.characterId) : null;
-  if (!parsed.success || !character?.isActive) return json({ ok: false, error: "INVALID_REQUEST" }, 400);
+  if (!parsed.success || !character?.isActive || !character.chatEnabled) return json({ ok: false, error: "INVALID_REQUEST" }, 400);
   const { content } = parsed.data;
 
   const admin = createAdminClient();

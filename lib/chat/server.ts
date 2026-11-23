@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 export async function getOrCreateRoomId(
   userId: string,
-  character: { id: string; isActive: boolean },
+  character: { id: string; isActive: boolean; chatEnabled: boolean },
 ): Promise<number | null> {
   const admin = createAdminClient();
   const findRoomId = async () => {
@@ -24,7 +24,8 @@ export async function getOrCreateRoomId(
 
   // 대부분은 이미 방이 있으므로 조회 먼저 (DB 왕복 1번)
   const existing = await findRoomId();
-  if (existing != null || !character.isActive) return existing;
+  // 비활성·Coming soon 캐릭터는 새 방을 만들지 않는다 (기존 방만)
+  if (existing != null || !character.isActive || !character.chatEnabled) return existing;
 
   // ⚠️ 여기서 findRoomId()를 다시 부르면 안 된다: 같은 URL의 GET fetch는 한 렌더 안에서
   // Next.js가 메모이즈하므로 위의 "방 없음(null)" 응답이 그대로 재사용되어 404가 난다.

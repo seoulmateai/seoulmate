@@ -106,10 +106,6 @@ export function HomeHero({ characters }: { characters: CharacterCard[] }) {
                     className="object-cover object-top"
                   />
                   <div className="absolute inset-0 bg-linear-to-t from-black via-black/15 to-black/20" />
-                  <div className="absolute right-10 bottom-24 left-5 max-w-[220px] rounded-2xl rounded-bl-md bg-white px-3 py-2 text-[12px] leading-snug text-neutral-900 shadow-lg sm:top-16 sm:right-5 sm:bottom-auto sm:left-auto sm:max-w-[240px] sm:rounded-br-md sm:rounded-bl-2xl sm:px-3.5 sm:py-2.5 sm:text-[13px]">
-                    <p className="mb-0.5 text-[11px] font-bold text-coral">{character.name}</p>
-                    <span className="line-clamp-3">{character.bio}</span>
-                  </div>
                   <div className="absolute inset-x-0 bottom-0 p-5 text-white">
                     <p className="text-2xl font-bold tracking-[-0.03em]">
                       {character.name}, {character.age}

@@ -60,6 +60,7 @@ export default async function ExplorePage() {
                     name: character.name,
                     occupation: character.occupation,
                     avatar: character.avatar,
+                    chatEnabled: character.chatEnabled,
                   }}
                 />
               </li>
@@ -91,12 +92,21 @@ export default async function ExplorePage() {
                 <p className="truncate text-sm font-semibold">{character.name}</p>
                 <p className="truncate text-xs text-muted-foreground">{character.occupation}</p>
               </div>
-              <Link
-                href={`/chats/${character.id}`}
-                className="btn-gradient inline-flex h-7 items-center rounded-full px-3 text-[11px] font-bold"
-              >
-                Chat
-              </Link>
+              {character.chatEnabled ? (
+                <Link
+                  href={`/chats/${character.id}`}
+                  className="btn-gradient inline-flex h-7 items-center rounded-full px-3 text-[11px] font-bold"
+                >
+                  Chat
+                </Link>
+              ) : (
+                <span
+                  aria-disabled
+                  className="inline-flex h-7 cursor-not-allowed items-center rounded-full border border-white/15 px-3 text-[11px] font-bold whitespace-nowrap text-white/50"
+                >
+                  Soon
+                </span>
+              )}
             </li>
           ))}
         </ul>

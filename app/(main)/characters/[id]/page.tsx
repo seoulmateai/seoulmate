@@ -79,12 +79,21 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
             <p className="text-[15px] leading-relaxed text-foreground/85">{character.intro}</p>
           </section>
 
-          <Link
-            href={`/chats/${character.id}`}
-            className="btn-gradient flex h-13 items-center justify-center rounded-full text-base font-bold transition-[filter] hover:brightness-110 md:self-start md:px-12"
-          >
-            Start chat
-          </Link>
+          {character.chatEnabled ? (
+            <Link
+              href={`/chats/${character.id}`}
+              className="btn-gradient flex h-13 items-center justify-center rounded-full text-base font-bold transition-[filter] hover:brightness-110 md:self-start md:px-12"
+            >
+              Start chat
+            </Link>
+          ) : (
+            <span
+              aria-disabled
+              className="flex h-13 cursor-not-allowed items-center justify-center rounded-full border border-white/15 bg-white/5 text-base font-bold text-white/50 md:self-start md:px-12"
+            >
+              Coming soon
+            </span>
+          )}
         </div>
       </div>
     </div>
