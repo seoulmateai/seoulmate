@@ -146,8 +146,8 @@ export function ChatInput({
             }
           }}
         />
-        {/* 전송 버튼에 붙여서 묶음처럼 보이게 (입력창 행의 gap-2.5를 줄임) */}
-        <div className="relative -mr-2 shrink-0">
+        {/* 전송 버튼과 묶음처럼 보이게 간격을 줄임 (동그라미끼리 겹치지 않게 2px 틈) */}
+        <div className="relative -mr-1 shrink-0">
           {narrating && (
             <div
               role="status"
