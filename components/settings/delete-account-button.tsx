@@ -1,7 +1,6 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ import {
 import { signOutInThisTab } from "@/lib/auth/sign-out";
 
 export function DeleteAccountButton() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,8 +30,8 @@ export function DeleteAccountButton() {
     }
     // 계정이 이미 삭제됐으므로 서버 호출 없이 브라우저 세션만 정리
     await signOutInThisTab({ scope: "local" });
-    router.replace("/");
-    router.refresh();
+    // 전체 새로고침: 클라이언트에 보관된 이전 화면(채팅방 등)이 남지 않게
+    window.location.replace("/");
   }
 
   return (
