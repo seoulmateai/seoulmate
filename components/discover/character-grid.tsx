@@ -84,7 +84,7 @@ export function CharacterGrid({ characters }: { characters: CharacterCard[] }) {
                   sizes="(max-width: 1050px) 50vw, 280px"
                   className="object-cover object-top transition-transform duration-500 group-hover:scale-[1.04]"
                 />
-                <div className="absolute inset-0 bg-linear-to-t from-black via-black/25 to-black/10" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/90 via-transparent via-45% to-transparent md:from-black md:via-black/25 md:via-50% md:to-black/10" />
                 <span
                   className={cn(
                     "absolute top-3 left-3 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wide",
@@ -95,19 +95,19 @@ export function CharacterGrid({ characters }: { characters: CharacterCard[] }) {
                 >
                   {character.badge === "popular" ? "HOT" : "NEW"}
                 </span>
-                <div className="absolute inset-x-0 bottom-0 p-3.5 pb-16 md:p-4 md:pb-[4.5rem]">
-                  <p className="text-[17px] font-extrabold tracking-[-0.03em] md:text-xl">
+                <div className="absolute inset-x-0 bottom-0 p-3 pb-12 md:p-4 md:pb-[4.5rem]">
+                  <p className="text-[15px] font-extrabold tracking-[-0.03em] md:text-xl">
                     {character.name}, {character.age}
                   </p>
                   <p className="mt-0.5 text-[11px] text-white/70 md:text-xs">{character.occupation}</p>
-                  <p className="mt-2 line-clamp-2 font-script text-[13px] leading-snug text-white/85">
+                  <p className="mt-2 hidden font-script md:line-clamp-2 text-[13px] leading-snug text-white/85">
                     &ldquo;{character.bio}&rdquo;
                   </p>
                 </div>
               </Link>
               <Link
                 href={`/chats/${character.id}`}
-                className="btn-gradient absolute inset-x-3.5 bottom-3.5 z-10 inline-flex h-9 items-center justify-center gap-1 rounded-full text-xs font-bold transition-[filter] hover:brightness-110 md:inset-x-4 md:bottom-4 md:h-10 md:text-sm"
+                className="btn-gradient absolute inset-x-3 bottom-3 z-10 inline-flex h-8 items-center justify-center gap-1 rounded-full text-[11px] font-bold transition-[filter] hover:brightness-110 md:inset-x-4 md:bottom-4 md:h-10 md:text-sm"
               >
                 Chat now
                 <ArrowRight className="size-3.5" aria-hidden />
