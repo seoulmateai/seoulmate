@@ -5,7 +5,7 @@
 //   왔어?
 //
 // - 단락은 빈 줄로 구분. 줄 전체가 *...* 이면 상황 묘사(줄글), 아니면 대사(말풍선)
-// - AI 답장은 서버가 serializeParts()로 이 형식에 맞춰 저장한다 (묘사 1단락 = 1줄)
+// - AI 답장은 서버가 serializeParts()로 이 형식에 맞춰 저장한다 (묘사 1단락 = 1줄, 묘사 안의 빈 줄은 단락 구분)
 // - 사용자 입력은 그대로 저장하고 화면에서만 parseMessageContent()로 나눈다
 // - 별표가 없는 기존 메시지는 대사 1개
 
@@ -39,15 +39,19 @@ export function parseMessageContent(content: string): ContentPart[] {
   return parts;
 }
 
-/** AI 답장 parts → 저장 형식. 별표는 지우고, 묘사는 한 줄로, 대사 안의 빈 줄은 한 줄바꿈으로 */
+/** AI 답장 parts → 저장 형식. 별표는 지우고, 묘사는 빈 줄마다 단락을 나눠 단락당 한 줄로, 대사 안의 빈 줄은 한 줄바꿈으로 */
 export function serializeParts(parts: ContentPart[]): string {
   return parts
     .map(({ kind, text }) => {
       const clean = text.replace(/\*/g, "").trim();
       if (!clean) return "";
-      return kind === "NARRATION"
-        ? `*${clean.replace(/\s*\n\s*/g, " ")}*`
-        : clean.replace(/\n\s*\n+/g, "\n");
+      if (kind === "DIALOGUE") return clean.replace(/\n\s*\n+/g, "\n");
+      return clean
+        .split(/\n\s*\n/)
+        .map((p) => p.trim().replace(/\s*\n\s*/g, " "))
+        .filter(Boolean)
+        .map((p) => `*${p}*`)
+        .join("\n\n");
     })
     .filter(Boolean)
     .join("\n\n");

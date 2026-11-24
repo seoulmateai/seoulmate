@@ -27,13 +27,13 @@ import {
   type LlmUsage,
 } from "./client";
 
-const TIMEOUT_MS = 25_000;
+const TIMEOUT_MS = 40_000;
 /** 답장 1회당 종류별 최대 단락 수 (묘사·대사 각각) */
-const MAX_PARTS_PER_KIND = 2;
+const MAX_PARTS_PER_KIND = 3;
 /** 프롬프트로 요청하는 답장 길이 (묘사+대사 합계) */
-const TARGET_REPLY_CHARS = 1000;
+const TARGET_REPLY_CHARS = 1500;
 /** 에피소드를 시작하는 답장 길이 (이전 장면 마무리 + 전환 + 구체적인 장면 묘사라 더 길게) */
-const EPISODE_REPLY_CHARS = 1600;
+const EPISODE_REPLY_CHARS = 2200;
 /** 단락 1개 상한. 저장 형식 전체는 messages.content CHECK(4000자) 안에 들어가야 함 */
 const MAX_PART_CHARS = 1900;
 const MAX_CONTENT_CHARS = 4000;
@@ -207,7 +207,7 @@ export async function generateReply({
   }
 }
 
-/** 모델 JSON → 종류별 최대 2단락으로 자르고 저장 형식으로. 쓸 내용이 없거나 JSON이 깨지면 null */
+/** 모델 JSON → 종류별 최대 MAX_PARTS_PER_KIND단락으로 자르고 저장 형식으로. 쓸 내용이 없거나 JSON이 깨지면 null */
 function toStoredReply(raw: string) {
   let parsed: z.infer<typeof responseSchema>;
   try {
@@ -269,7 +269,8 @@ Reply as JSON: {"affection_delta": <integer>, "parts": [{"kind": "NARRATION" | "
 - affection_delta: see "# Affection". Decide it first, before writing the parts.
 - NARRATION: prose describing your character's actions, expressions, inner reactions, the surroundings, and the situation. Third person, present tense, referring to your character by name or pronoun.
 - DIALOGUE: exactly what your character says out loud. Each DIALOGUE part is shown as one chat bubble. No quotation marks and no asterisks.
-- Use at most ${MAX_PARTS_PER_KIND} NARRATION parts and ${MAX_PARTS_PER_KIND} DIALOGUE parts per reply. Prefer alternating them, usually starting with narration (narration, dialogue, narration, dialogue), so actions and spoken lines interweave naturally. Aim for about ${TARGET_REPLY_CHARS} characters in total.
+- Usually write ${MAX_PARTS_PER_KIND} NARRATION parts and ${MAX_PARTS_PER_KIND} DIALOGUE parts, alternating and starting with narration (narration, dialogue, narration, dialogue, narration, dialogue), so actions and spoken lines interweave naturally. Never use more than ${MAX_PARTS_PER_KIND} of each kind. A short, quiet moment may use 2 of each, but don't stop after a single narration and a single line.
+- Let the scene progress from one part to the next instead of packing everything into one long NARRATION. If a NARRATION part runs longer than about 3 sentences, split it into short paragraphs separated by a blank line (\\n\\n) within the same part. Aim for about ${TARGET_REPLY_CHARS} characters in total.
 - Describe only your character and the world. Never write the user's actions, words, thoughts, or feelings, and never decide what the user does.
 - Write in the same language as the user's latest message, even if earlier messages were in a different language.
 - In earlier messages, paragraphs wrapped in *asterisks* are narration (actions and situation) and the rest is spoken dialogue. The user may describe their own actions the same way.
@@ -328,7 +329,7 @@ ${scenario}
 2. Then transition clearly into the episode. Make the passage of time or the change of place explicit (later that evening, a few days later, the next weekend, on the way home...), and connect it to what came before where it makes sense.
 3. Set the episode's scene in concrete, vivid detail: where and when it is, the surroundings and atmosphere (light, sound, weather, smells), what is happening and why, and your character's appearance, actions, and expression in that moment. ${nickname} should be able to picture the situation clearly.
 4. Then play out the scenario's key moment through your character's actions and words, and end at a point where ${nickname} can naturally respond. Don't resolve the whole episode in this reply.
-- A good shape: NARRATION (close the current scene and transition), DIALOGUE (a line that bridges into the new situation), NARRATION (the detailed episode scene), DIALOGUE (your character's line inviting ${nickname} in).
+- A good shape: NARRATION (close the current scene and transition), DIALOGUE (a line that bridges into the new situation), NARRATION (the detailed episode scene), DIALOGUE (your character's line within that scene), NARRATION (the scenario's key moment unfolding through your character's actions and expression), DIALOGUE (your character's line inviting ${nickname} in).
 - For this reply only, you may write up to about ${EPISODE_REPLY_CHARS} characters in total.
 - Follow the scenario, but keep your character's Personality, Speech style, and the current relationship stage. Don't contradict anything that already happened in the story.
 - The last user message "${EPISODE_CUE}" is only a cue to continue; ${nickname} did not say it. Set "affection_delta" to 0.
