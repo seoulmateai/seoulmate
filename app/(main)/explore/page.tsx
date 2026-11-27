@@ -1,18 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
+import { connection } from "next/server";
+import { Suspense } from "react";
 
 import { CharacterStrip } from "@/components/explore/character-strip";
 import { FeedPostCard } from "@/components/explore/feed-post";
-import { getCharacters } from "@/lib/characters";
-import { postsForCharacter } from "@/lib/explore/posts";
+import { getCharacters, type Character } from "@/lib/characters";
+import { postsForCharacter, shuffleItems } from "@/lib/explore/posts";
 
 export const metadata = { title: "Feed · seoulmate" };
 
 export default async function ExplorePage() {
   const characters = await getCharacters();
-  const posts = characters.flatMap((character) =>
-    postsForCharacter(character.name).map((post) => ({ post, character })),
-  );
 
   return (
     <div className="page-container grid gap-8 pt-6 pb-12 lg:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,560px)_260px] xl:justify-center">
@@ -47,26 +46,9 @@ export default async function ExplorePage() {
             hasPosts: postsForCharacter(character.name).length > 0,
           }))}
         />
-        {posts.length === 0 ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">No posts yet</p>
-        ) : (
-          <ul className="flex flex-col gap-6">
-            {posts.map(({ post, character }) => (
-              <li key={`${character.id}-${post.id}`}>
-                <FeedPostCard
-                  post={post}
-                  character={{
-                    id: character.id,
-                    name: character.name,
-                    occupation: character.occupation,
-                    avatar: character.avatar,
-                    chatEnabled: character.chatEnabled,
-                  }}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
+        <Suspense fallback={<FeedSkeleton />}>
+          <RandomFeed characters={characters} />
+        </Suspense>
       </div>
 
       <aside className="hidden xl:block">
@@ -112,5 +94,53 @@ export default async function ExplorePage() {
         </ul>
       </aside>
     </div>
+  );
+}
+
+async function RandomFeed({ characters }: { characters: Character[] }) {
+  await connection();
+  const posts = shuffleItems(
+    characters.flatMap((character) =>
+      postsForCharacter(character.name).map((post) => ({ post, character })),
+    ),
+  );
+
+  if (posts.length === 0) {
+    return <p className="py-16 text-center text-sm text-muted-foreground">No posts yet</p>;
+  }
+
+  return (
+    <ul className="flex flex-col gap-6">
+      {posts.map(({ post, character }) => (
+        <li key={`${character.id}-${post.id}`}>
+          <FeedPostCard
+            post={post}
+            character={{
+              id: character.id,
+              name: character.name,
+              occupation: character.occupation,
+              avatar: character.avatar,
+              chatEnabled: character.chatEnabled,
+            }}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function FeedSkeleton() {
+  return (
+    <ul className="flex flex-col gap-6" aria-hidden>
+      {["a", "b"].map((key) => (
+        <li key={key} className="overflow-hidden rounded-[28px] border border-white/10 bg-[#100d14]">
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <span className="size-11 animate-pulse rounded-full bg-white/10" />
+            <span className="h-3 w-28 animate-pulse rounded-full bg-white/10" />
+          </div>
+          <div className="aspect-[4/5] animate-pulse bg-white/5" />
+        </li>
+      ))}
+    </ul>
   );
 }
